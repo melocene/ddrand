@@ -1,0 +1,19 @@
+name: Security audit
+
+on:
+  schedule:
+    - cron: '0 4 * * 2' # weekly at 0400 on Tuesday
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  audit:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rustsec/audit-check@v1.4.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

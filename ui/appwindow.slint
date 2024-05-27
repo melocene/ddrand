@@ -1,0 +1,264 @@
+import { Button, CheckBox, GroupBox, HorizontalBox, LineEdit, VerticalBox, StandardButton , ScrollView} from "std-widgets.slint";
+
+export component AppWindow inherits Window {
+    title: app-window-title;
+    height: 470px;
+    width: 512px;
+    default-font-size: 14px;
+    callback select-dir();
+    callback generate-clicked();
+    callback weekly-clicked();
+    callback enable-clicked();
+    callback enable-clicked-confirmed();
+    callback disable-clicked();
+    callback disable-clicked-confirmed();
+    in-out property <string> app_window_title;
+    in-out property <bool> is-mod-installed;
+    in-out property <bool> show-overwrite;
+    in-out property <bool> rand-boss;
+    in-out property <bool> rand-combat-skills;
+    in-out property <bool> rand-monster;
+    in-out property <string> game-dir;
+    in-out property <string> mod-dir;
+    in-out property <string> seed-value;
+    in-out property <string> status-text;
+    VerticalBox {
+        Text {
+            text: "** This is not an official product of Red Hook Studios or Darkest Dungeon **";
+            color: Colors.red;
+            font-weight: 500;
+            horizontal-alignment: center;
+        }
+
+        HorizontalBox {
+            Text {
+                text: "Game Directory:";
+                height: 24px;
+                font-weight: 640;
+                vertical-alignment: center;
+            }
+
+            LineEdit {
+                input-type: text;
+                read-only: true;
+                text: root.game-dir;
+            }
+
+            Button {
+                text: "...";
+                clicked => {
+                    root.select-dir();
+                }
+            }
+        }
+
+        HorizontalBox {
+            Text {
+                text: "Mod Directory:";
+                height: 24px;
+                font-weight: 640;
+                vertical-alignment: center;
+            }
+
+            LineEdit {
+                input-type: text;
+                read-only: true;
+                text: root.mod-dir;
+            }
+        }
+
+        VerticalBox {
+            HorizontalBox {
+                Text {
+                    text: "Seed:";
+                    height: 24px;
+                    font-weight: 640;
+                    vertical-alignment: center;
+                    horizontal-alignment: left;
+                }
+
+                LineEdit {
+                    input-type: text;
+                    text: root.seed-value;
+                    edited => {
+                        root.seed-value = self.text;
+                    }
+                }
+            }
+
+            HorizontalBox {
+                Button {
+                    text: "Generate";
+                    clicked => {
+                        root.generate-clicked();
+                    }
+                }
+
+                Button {
+                    text: "Weekly";
+                    clicked => {
+                        root.weekly-clicked();
+                    }
+                }
+            }
+        }
+
+        HorizontalBox {
+            GroupBox {
+                title: "Randomize:";
+                // Currently disabled due to duplicate spawns when used with monster randomization.
+                // CheckBox {
+                //     text: "Bosses";
+                //     enabled: false;
+                //     toggled => {
+                //         root.rand-boss = self.checked;
+                //     }
+                // }
+
+                CheckBox {
+                    text: "Combat Skills";
+                    toggled => {
+                        root.rand-combat-skills = self.checked;
+                    }
+                }
+
+                CheckBox {
+                    text: "Monsters";
+                    toggled => {
+                        root.rand-monster = self.checked;
+                    }
+                }
+            }
+        }
+
+        HorizontalBox {
+            if is-mod-installed: Button {
+                text: "Enable";
+                height: 32px;
+                primary: true;
+                clicked => {
+                    popup-overwrite.show();
+                }
+            }
+            if !is-mod-installed: Button {
+                text: "Enable";
+                height: 32px;
+                primary: true;
+                clicked => {
+                    root.enable-clicked();
+                }
+            }
+
+            Button {
+                text: "Disable";
+                height: 32px;
+                enabled: is-mod-installed;
+                clicked => {
+                    popup-disable.show();
+                }
+            }
+        }
+
+        // "Status Bar"
+        Rectangle {
+            background: Colors.grey;
+            height: 24px;
+            width: 100%;
+            Text {
+                //x: 16px;
+                x: parent.width / 32;
+                y: parent.height / 4;
+                color: root.background;
+                text: root.status-text;
+            }
+        }
+    }
+
+    // Confirmation popup for mod removal.
+    popup-disable := PopupWindow {
+        close-on-click: false;
+        height: root.height / 4;
+        width: root.width / 4;
+        x: root.width / 3;
+        y: root.height / 3;
+        Rectangle {
+            height: root.height / 3;
+            width: root.width / 2;
+            background: root.background;
+            border-color: Colors.grey;
+            border-radius: 8px;
+            border-width: 4px;
+        }
+
+        VerticalBox {
+            Text {
+                text: "Confirm mod uninstallation?";
+                height: 24px;
+                font-weight: 640;
+                vertical-alignment: center;
+                horizontal-alignment: center;
+            }
+
+            HorizontalBox {
+                StandardButton {
+                    kind: yes;
+                    clicked => {
+                        root.disable-clicked-confirmed();
+                        popup-disable.close();
+                    }
+                }
+
+                StandardButton {
+                    kind: no;
+                    clicked => {
+                        popup-disable.close();
+                    }
+                }
+            }
+        }
+    }
+
+    // Confirmation for overwriting the mod if enabling when already present.
+    popup-overwrite := PopupWindow {
+        close-on-click: false;
+        height: root.height / 4;
+        width: root.width / 4;
+        x: root.width / 3;
+        y: root.height / 3;
+        Rectangle {
+            height: root.height / 3;
+            width: root.width / 2;
+            background: root.background;
+            border-color: Colors.grey;
+            border-radius: 8px;
+            border-width: 4px;
+        }
+
+        VerticalBox {
+            Text {
+                text: "Confirm mod overwrite?";
+                height: 24px;
+                font-weight: 640;
+                vertical-alignment: center;
+                horizontal-alignment: center;
+            }
+
+            HorizontalBox {
+                StandardButton {
+                    kind: yes;
+                    clicked => {
+                        root.enable-clicked-confirmed();
+                        popup-overwrite.close();
+                    }
+                }
+
+                StandardButton {
+                    kind: no;
+                    clicked => {
+                        popup-overwrite.close();
+                    }
+                }
+            }
+        }
+    }
+}
