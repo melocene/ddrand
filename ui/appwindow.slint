@@ -79,7 +79,7 @@ export component AppWindow inherits Window {
 
                 LineEdit {
                     input-type: text;
-                    text: root.seed-value;
+                    text <=> root.seed-value;
                     edited => {
                         root.seed-value = self.text;
                     }
