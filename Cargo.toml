@@ -23,7 +23,7 @@ strip = true
 
 [dependencies]
 chrono = { version = "0.4.38", default-features = false, features = ["std", "now", "alloc", "winapi", "windows-targets"] }
-clap = { version = "4.5.8", default-features = false, features = ["derive", "error-context", "help", "std", "usage"] }
+clap = { version = "4.5.9", default-features = false, features = ["derive", "error-context", "help", "std", "usage"] }
 data-encoding = "2.6.0"
 indexmap = "2.2.6"
 log = "0.4.22"
