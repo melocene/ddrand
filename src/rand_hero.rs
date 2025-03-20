@@ -94,6 +94,7 @@ pub fn get_data_files(
 /// Extract hero specific data from the appropriate files
 pub fn extract_data(datafiles: &[PathBuf]) -> Vec<Hero> {
     let mut heroes: Vec<Hero> = Vec::new();
+    let re: Regex = Regex::new(r#"id\s"(\w*)"\s(.*)"#).unwrap();
     for hpath in datafiles {
         let cname = hpath.file_stem().unwrap().to_str().unwrap();
         let cname: Vec<&str> = cname.split('.').collect();
@@ -116,7 +117,6 @@ pub fn extract_data(datafiles: &[PathBuf]) -> Vec<Hero> {
         // lines in the associated class info file
         // collect the names as the key and then each skill level's data as an array for the value
         let mut tmp_data: IndexMap<String, Vec<String>> = IndexMap::new();
-        let re: Regex = Regex::new(r#"id\s"(\w*)"\s(.*)"#).unwrap();
         for line in buf.lines() {
             if line.starts_with("combat_skill") {
                 let caps: Captures = re.captures(line).unwrap();
