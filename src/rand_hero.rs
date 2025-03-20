@@ -1,14 +1,14 @@
 use indexmap::IndexMap;
 use log::*;
-use rand::{rngs::StdRng, Rng};
+use rand::{Rng, rngs::StdRng};
 use regex::{Captures, Regex};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
 use std::fs::{File, OpenOptions};
-use std::io::prelude::*;
 use std::io::BufReader;
+use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
 /// Translations for numeric positions to strings

@@ -7,7 +7,7 @@ slint::include_modules!();
 use chrono::Datelike;
 use clap::Parser;
 use log::*;
-use rand::{distr::Alphanumeric, rngs::StdRng, rng, Rng};
+use rand::{Rng, distr::Alphanumeric, rng, rngs::StdRng};
 use rand_pcg::Pcg64;
 use rand_seeder::Seeder;
 use rfd::FileDialog;
@@ -347,7 +347,9 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
                     if outfile.write_all(output.as_bytes()).is_ok() {
                         info!("Audio data successfully written for randomizer mod")
                     } else {
-                        warn!("Unable to write mod audio data, audio for altered spawns may be missing");
+                        warn!(
+                            "Unable to write mod audio data, audio for altered spawns may be missing"
+                        );
                     }
                 }
                 Err(_) => {

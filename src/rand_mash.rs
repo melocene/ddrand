@@ -1,11 +1,11 @@
 use log::*;
-use rand::{rngs::StdRng, Rng};
+use rand::{Rng, rngs::StdRng};
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
 use std::fs::{File, OpenOptions};
-use std::io::prelude::*;
 use std::io::BufReader;
+use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone)]
