@@ -102,7 +102,7 @@ All notable changes to this project can be found in the [changelog](CHANGELOG.md
 
 ## License
 
-Copyright (c) 2024 [ddrand developers](https://github.com/melocene/ddrand/)
+Copyright (c) 2024-2025 [ddrand developers](https://github.com/melocene/ddrand/)
 
 `ddrand` is released under the GPLv3 license.
 
