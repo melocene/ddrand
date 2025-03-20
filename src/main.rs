@@ -7,7 +7,7 @@ slint::include_modules!();
 use chrono::Datelike;
 use clap::Parser;
 use log::*;
-use rand::{distributions::Alphanumeric, rngs::StdRng, thread_rng, Rng};
+use rand::{distr::Alphanumeric, rngs::StdRng, rng, Rng};
 use rand_pcg::Pcg64;
 use rand_seeder::Seeder;
 use rfd::FileDialog;
@@ -177,7 +177,7 @@ fn main() -> Result<(), slint::PlatformError> {
 
 /// Callback to generate a 32 character string to use as an input seed for the random number generator.
 fn generate_clicked() -> String {
-    thread_rng()
+    rng()
         .sample_iter(&Alphanumeric)
         .map(char::from)
         .take(32)
@@ -191,7 +191,7 @@ fn weekly_clicked() -> String {
     debug!("Current week: {}", current_week);
     let week_seed = format!("{}{}seedoftheweek", current_date.year(), current_week);
     debug!("Weekly base seed: {}", &week_seed);
-    let week_rng: Pcg64 = Seeder::from(week_seed).make_rng();
+    let week_rng: Pcg64 = Seeder::from(week_seed).into_rng();
     let wseed = week_rng
         .sample_iter(&Alphanumeric)
         .map(char::from)
@@ -229,7 +229,7 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
     }
 
     // create the new StdRng from the provided seed value
-    let seed_rng: StdRng = Seeder::from(&seed_val).make_rng();
+    let seed_rng: StdRng = Seeder::from(&seed_val).into_rng();
 
     helpers::install_mod(&mod_dir, &mode_localization_dir);
 

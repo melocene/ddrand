@@ -249,7 +249,7 @@ pub fn randomize(
 
         // pick a skill group randomly for the current hero and write the new skill data
         // remove the chosen groups to avoid duplicates being assigned
-        let gidx = seed_rng.gen_range(0..skill_groups.len());
+        let gidx = seed_rng.random_range(0..skill_groups.len());
         let hgroup = &skill_groups[gidx].clone();
         skill_groups.remove(gidx);
 
@@ -404,7 +404,7 @@ fn shuffle_skills(
         let mut group: Vec<Skill> = Vec::new();
         // each group should contain 8 skills total, max number is a variable for safety
         while group.len() < beast_skills.len() + 3 {
-            let rand_idx = seed_rng.gen_range(0..skill_collection.len());
+            let rand_idx = seed_rng.random_range(0..skill_collection.len());
             let skname = &skill_collection[rand_idx].name;
             // skip beast skills here as they are assigned to the final group to keep them together
             if !beast_skills.contains(skname) {
