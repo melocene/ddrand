@@ -16,6 +16,7 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
 };
+use tracing_subscriber::filter::LevelFilter;
 
 use crate::helpers::GamePath;
 
@@ -46,9 +47,9 @@ fn main() -> Result<(), slint::PlatformError> {
     // If compiled in `debug` mode or if provided the default flag print debug information to the log file.
     let _ = logger::init(
         if opts.debug || cfg!(debug_assertions) {
-            "debug"
+            LevelFilter::DEBUG
         } else {
-            "info"
+            LevelFilter::INFO
         },
         Some(&log_filename),
     );
