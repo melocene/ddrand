@@ -69,11 +69,14 @@ fn main() -> Result<(), slint::PlatformError> {
             String::new()
         }
     };
-    // Early exit if the game install directory does not exist or is not found.
     let tmp_ipath = Path::new(&install_path);
     if !tmp_ipath.exists() || !tmp_ipath.is_dir() {
-        error!("Installation path does not exist or is not a directory. Exiting...");
-        std::process::exit(1);
+        warn!("Installation path does not exist or is not a directory. Please use '...' button to select installation directory.");
+        // Set empty game directory in UI
+        app_window.as_weak().unwrap().set_game_dir("".into());
+    } else {
+        // Set detected game directory in UI
+        app_window.as_weak().unwrap().set_game_dir(install_path.clone().into());
     }
 
     // Return a dictionarty of paths for the various game and mod data directories.
