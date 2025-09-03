@@ -7,7 +7,7 @@ slint::include_modules!();
 use chrono::Datelike;
 use clap::Parser;
 use log::*;
-use rand::{Rng, distr::Alphanumeric, rng, rngs::StdRng};
+use rand::{distr::Alphanumeric, rng, rngs::StdRng, Rng};
 use rand_pcg::Pcg64;
 use rand_seeder::Seeder;
 use rfd::FileDialog;
@@ -89,10 +89,7 @@ fn main() -> Result<(), slint::PlatformError> {
     let gpaths: GamePath = match helpers::get_data_dirs(&install_path) {
         Ok(paths) => {
             debug!("{:#?}", paths);
-            info!(
-                "Mod directory will be:\'{}\'",
-                paths.mod_dir.display()
-            );
+            info!("Mod directory will be:\'{}\'", paths.mod_dir.display());
             app_window.set_mod_dir(paths.mod_dir.display().to_string().into());
             // If the mod directory exist, assume the mod is installed and enable disable button.
             if paths.mod_dir.exists() && paths.mod_dir.is_dir() {

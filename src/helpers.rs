@@ -6,7 +6,7 @@ use std::error::Error;
 use std::{
     fs,
     path::{Path, PathBuf},
-    process::{Command, Stdio, exit},
+    process::{exit, Command, Stdio},
     thread,
 };
 
@@ -24,8 +24,8 @@ pub struct GamePath {
 
 /// Attempt automated discovery of the game installation path based on OS
 pub fn get_install_path() -> Result<String, Box<dyn std::error::Error>> {
-    use winreg::RegKey;
     use winreg::enums::HKEY_LOCAL_MACHINE;
+    use winreg::RegKey;
 
     let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
     let install_path = match hklm
