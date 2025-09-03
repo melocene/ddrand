@@ -7,7 +7,7 @@ slint::include_modules!();
 use chrono::Datelike;
 use clap::Parser;
 use log::*;
-use rand::{distr::Alphanumeric, rng, rngs::StdRng, Rng};
+use rand::{Rng, distr::Alphanumeric, rng, rngs::StdRng};
 use rand_pcg::Pcg64;
 use rand_seeder::Seeder;
 use rfd::FileDialog;
