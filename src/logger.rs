@@ -1,7 +1,7 @@
-use std::{fs::OpenOptions, str::FromStr};
+use std::fs::OpenOptions;
 use tracing_subscriber::{filter::LevelFilter, fmt::time::ChronoLocal, prelude::*};
 
-pub fn init(level: &str, log_file: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+pub fn init(level: LevelFilter, log_file: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
     let mut layers = vec![];
 
     // Ignore file writing if a filename was not provided for the log.
@@ -15,7 +15,7 @@ pub fn init(level: &str, log_file: Option<&str>) -> Result<(), Box<dyn std::erro
                     .with_target(false)
                     .with_writer(log_file_path)
                     .compact()
-                    .with_filter(LevelFilter::from_str(level).unwrap_or(LevelFilter::INFO))
+                    .with_filter(level)
                     .boxed();
                 layers.push(log_file);
             }

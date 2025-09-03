@@ -1,14 +1,14 @@
 use indexmap::IndexMap;
 use log::*;
-use rand::{rngs::StdRng, Rng};
+use rand::{Rng, rngs::StdRng};
 use regex::{Captures, Regex};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
 use std::fs::{File, OpenOptions};
-use std::io::prelude::*;
 use std::io::BufReader;
+use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
 /// Translations for numeric positions to strings
@@ -94,6 +94,7 @@ pub fn get_data_files(
 /// Extract hero specific data from the appropriate files
 pub fn extract_data(datafiles: &[PathBuf]) -> Vec<Hero> {
     let mut heroes: Vec<Hero> = Vec::new();
+    let re: Regex = Regex::new(r#"id\s"(\w*)"\s(.*)"#).unwrap();
     for hpath in datafiles {
         let cname = hpath.file_stem().unwrap().to_str().unwrap();
         let cname: Vec<&str> = cname.split('.').collect();
@@ -116,7 +117,6 @@ pub fn extract_data(datafiles: &[PathBuf]) -> Vec<Hero> {
         // lines in the associated class info file
         // collect the names as the key and then each skill level's data as an array for the value
         let mut tmp_data: IndexMap<String, Vec<String>> = IndexMap::new();
-        let re: Regex = Regex::new(r#"id\s"(\w*)"\s(.*)"#).unwrap();
         for line in buf.lines() {
             if line.starts_with("combat_skill") {
                 let caps: Captures = re.captures(line).unwrap();
@@ -249,7 +249,7 @@ pub fn randomize(
 
         // pick a skill group randomly for the current hero and write the new skill data
         // remove the chosen groups to avoid duplicates being assigned
-        let gidx = seed_rng.gen_range(0..skill_groups.len());
+        let gidx = seed_rng.random_range(0..skill_groups.len());
         let hgroup = &skill_groups[gidx].clone();
         skill_groups.remove(gidx);
 
@@ -404,7 +404,7 @@ fn shuffle_skills(
         let mut group: Vec<Skill> = Vec::new();
         // each group should contain 8 skills total, max number is a variable for safety
         while group.len() < beast_skills.len() + 3 {
-            let rand_idx = seed_rng.gen_range(0..skill_collection.len());
+            let rand_idx = seed_rng.random_range(0..skill_collection.len());
             let skname = &skill_collection[rand_idx].name;
             // skip beast skills here as they are assigned to the final group to keep them together
             if !beast_skills.contains(skname) {

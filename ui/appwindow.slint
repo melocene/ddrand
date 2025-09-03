@@ -79,7 +79,7 @@ export component AppWindow inherits Window {
 
                 LineEdit {
                     input-type: text;
-                    text: root.seed-value;
+                    text <=> root.seed-value;
                     edited => {
                         root.seed-value = self.text;
                     }
@@ -176,7 +176,7 @@ export component AppWindow inherits Window {
 
     // Confirmation popup for mod removal.
     popup-disable := PopupWindow {
-        close-on-click: false;
+        close-policy: close-on-click;
         height: root.height / 4;
         width: root.width / 4;
         x: root.width / 3;
@@ -220,7 +220,7 @@ export component AppWindow inherits Window {
 
     // Confirmation for overwriting the mod if enabling when already present.
     popup-overwrite := PopupWindow {
-        close-on-click: false;
+        close-policy: close-on-click;
         height: root.height / 4;
         width: root.width / 4;
         x: root.width / 3;

@@ -7,7 +7,7 @@ slint::include_modules!();
 use chrono::Datelike;
 use clap::Parser;
 use log::*;
-use rand::{distributions::Alphanumeric, rngs::StdRng, thread_rng, Rng};
+use rand::{Rng, distr::Alphanumeric, rng, rngs::StdRng};
 use rand_pcg::Pcg64;
 use rand_seeder::Seeder;
 use rfd::FileDialog;
@@ -16,6 +16,7 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
 };
+use tracing_subscriber::filter::LevelFilter;
 
 use crate::helpers::GamePath;
 
@@ -46,9 +47,9 @@ fn main() -> Result<(), slint::PlatformError> {
     // If compiled in `debug` mode or if provided the default flag print debug information to the log file.
     let _ = logger::init(
         if opts.debug || cfg!(debug_assertions) {
-            "debug"
+            LevelFilter::DEBUG
         } else {
-            "info"
+            LevelFilter::INFO
         },
         Some(&log_filename),
     );
@@ -68,11 +69,19 @@ fn main() -> Result<(), slint::PlatformError> {
             String::new()
         }
     };
-    // Early exit if the game install directory does not exist or is not found.
     let tmp_ipath = Path::new(&install_path);
     if !tmp_ipath.exists() || !tmp_ipath.is_dir() {
-        error!("Installation path does not exist or is not a directory. Exiting...");
-        std::process::exit(1);
+        warn!(
+            "Installation path does not exist or is not a directory. Please use '...' button to select installation directory."
+        );
+        // Set empty game directory in UI
+        app_window.as_weak().unwrap().set_game_dir("".into());
+    } else {
+        // Set detected game directory in UI
+        app_window
+            .as_weak()
+            .unwrap()
+            .set_game_dir(install_path.clone().into());
     }
 
     // Return a dictionarty of paths for the various game and mod data directories.
@@ -80,10 +89,7 @@ fn main() -> Result<(), slint::PlatformError> {
     let gpaths: GamePath = match helpers::get_data_dirs(&install_path) {
         Ok(paths) => {
             debug!("{:#?}", paths);
-            info!(
-                "Mod directory will be:\'{}\'",
-                paths.mod_dir.display().to_string()
-            );
+            info!("Mod directory will be:\'{}\'", paths.mod_dir.display());
             app_window.set_mod_dir(paths.mod_dir.display().to_string().into());
             // If the mod directory exist, assume the mod is installed and enable disable button.
             if paths.mod_dir.exists() && paths.mod_dir.is_dir() {
@@ -177,7 +183,7 @@ fn main() -> Result<(), slint::PlatformError> {
 
 /// Callback to generate a 32 character string to use as an input seed for the random number generator.
 fn generate_clicked() -> String {
-    thread_rng()
+    rng()
         .sample_iter(&Alphanumeric)
         .map(char::from)
         .take(32)
@@ -191,7 +197,7 @@ fn weekly_clicked() -> String {
     debug!("Current week: {}", current_week);
     let week_seed = format!("{}{}seedoftheweek", current_date.year(), current_week);
     debug!("Weekly base seed: {}", &week_seed);
-    let week_rng: Pcg64 = Seeder::from(week_seed).make_rng();
+    let week_rng: Pcg64 = Seeder::from(week_seed).into_rng();
     let wseed = week_rng
         .sample_iter(&Alphanumeric)
         .map(char::from)
@@ -229,7 +235,7 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
     }
 
     // create the new StdRng from the provided seed value
-    let seed_rng: StdRng = Seeder::from(&seed_val).make_rng();
+    let seed_rng: StdRng = Seeder::from(&seed_val).into_rng();
 
     helpers::install_mod(&mod_dir, &mode_localization_dir);
 
@@ -347,7 +353,9 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
                     if outfile.write_all(output.as_bytes()).is_ok() {
                         info!("Audio data successfully written for randomizer mod")
                     } else {
-                        warn!("Unable to write mod audio data, audio for altered spawns may be missing");
+                        warn!(
+                            "Unable to write mod audio data, audio for altered spawns may be missing"
+                        );
                     }
                 }
                 Err(_) => {

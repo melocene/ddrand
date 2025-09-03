@@ -1,11 +1,11 @@
 use log::*;
-use rand::{rngs::StdRng, Rng};
+use rand::{Rng, rngs::StdRng};
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
 use std::fs::{File, OpenOptions};
-use std::io::prelude::*;
 use std::io::BufReader;
+use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone)]
@@ -213,7 +213,7 @@ pub fn randomize(
 
         let mut data_lines = vec![data.into_iter()];
         if rand_mash && !hall_groups.is_empty() && !room_groups.is_empty() {
-            let hgidx = seed_rng.gen_range(0..hall_groups.get(&mash.id).unwrap().len());
+            let hgidx = seed_rng.random_range(0..hall_groups.get(&mash.id).unwrap().len());
             let hgroup = hall_groups
                 .get_mut(&mash.id)
                 .unwrap()
@@ -221,7 +221,7 @@ pub fn randomize(
                 .into_iter();
             data_lines.push(hgroup);
 
-            let rgidx = seed_rng.gen_range(0..room_groups.get(&mash.id).unwrap().len());
+            let rgidx = seed_rng.random_range(0..room_groups.get(&mash.id).unwrap().len());
             let rgroup = room_groups
                 .get_mut(&mash.id)
                 .unwrap()
@@ -231,7 +231,7 @@ pub fn randomize(
         }
 
         if rand_boss && !boss_groups.is_empty() {
-            let bgidx = seed_rng.gen_range(0..boss_groups.get(&mash.id).unwrap().len());
+            let bgidx = seed_rng.random_range(0..boss_groups.get(&mash.id).unwrap().len());
             let bgroup = boss_groups
                 .get_mut(&mash.id)
                 .unwrap()
@@ -267,7 +267,7 @@ fn shuffle_mash_loc(
     for _ in 0..group_count {
         let mut group: Vec<String> = Vec::new();
         while group.len() < item_count {
-            let rand_idx = seed_rng.gen_range(0..tloc_mash.len());
+            let rand_idx = seed_rng.random_range(0..tloc_mash.len());
             let line = &tloc_mash[rand_idx];
             group.push(line.to_string());
             tloc_mash.remove(rand_idx);
