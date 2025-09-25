@@ -1,19 +1,27 @@
 name: Security audit
 
+permissions:
+  contents: read
+  issues: write
+  checks: write
+
 on:
   schedule:
     - cron: '0 4 * * 2' # weekly at 0400 on Tuesday
   pull_request:
     types: [opened, synchronize, reopened]
   push:
+    paths: 
+      - '**/Cargo.toml'
+      - '**/Cargo.lock'
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
 
 jobs:
-  audit:
+  security_audit:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998 # v2.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
