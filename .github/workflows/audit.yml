@@ -3,7 +3,6 @@ name: Security audit
 permissions:
   contents: read
   issues: write
-  checks: write
 
 on:
   schedule:
