@@ -1,40 +1,40 @@
 name: Make release archive
 
+permissions:
+  contents: write
+
 on:
   push:
     tags:
     - 'v[0-9]+.[0-9]+.[0-9]+'
 
-permissions:
-  contents: write
-
 jobs:
   build:
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
-    - uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-    - name: Build release binary
-      run: cargo build --release
+      - name: Build release binary
+        run: cargo build --release
 
-    - name: Make release archive
-      run: |
-        python scripts\mkrelease.py
+      - name: Make release archive
+        run: |
+          python scripts\mkrelease.py
 
-    - name: Create release
-      uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda
-      with:
-        files: 'ddrand-v*-x86_64-windows.zip'
-        fail_on_unmatched_files: true
-        draft: false
-        prerelease: false
-        make_latest: "true"
-        tag_name: ${{ github.ref_name }}
-        token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create release
+        uses: softprops/action-gh-release@6cbd405e2c4e67a21c47fa9e383d020e4e28b836 # v2.3.3
+        with:
+          files: 'ddrand-v*-x86_64-windows.zip'
+          fail_on_unmatched_files: true
+          draft: false
+          prerelease: false
+          make_latest: "true"
+          tag_name: ${{ github.ref_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
