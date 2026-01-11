@@ -1,6 +1,7 @@
 use log::*;
 use regex::Regex;
 use remove_dir_all::*;
+use winreg::{enums::HKEY_LOCAL_MACHINE, RegKey};
 use std::collections::HashMap;
 use std::error::Error;
 use std::{
@@ -24,9 +25,6 @@ pub struct GamePath {
 
 /// Attempt automated discovery of the game installation path based on OS
 pub fn get_install_path() -> Result<String, Box<dyn std::error::Error>> {
-    use winreg::RegKey;
-    use winreg::enums::HKEY_LOCAL_MACHINE;
-
     let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
     let install_path = match hklm
         .open_subkey(r#"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 262060"#)
@@ -50,6 +48,12 @@ pub fn get_install_path() -> Result<String, Box<dyn std::error::Error>> {
 
 /// Get all hero directories from the install path
 pub fn get_data_dirs(install_dir: &String) -> Result<GamePath, Box<dyn Error>> {
+    // Early validation: check if install_dir is valid before attempting directory reads
+    let install_path = Path::new(install_dir);
+    if install_dir.is_empty() || !install_path.exists() || !install_path.is_dir() {
+        return Err(format!("Invalid or missing install directory: '{}'", install_dir).into());
+    }
+
     let valid_dungeon_names: &[String] = &[
         String::from("cove"),
         String::from("crypts"),
@@ -231,24 +235,23 @@ pub fn uninstall_mod(mod_dir: &Path) {
 
 /// Render mod project.xml template
 pub fn render_project_xml(install_path: &Path, mod_path: &Path) -> Result<String, Box<dyn Error>> {
-    let base_xml_path = Path::join(
-        install_path,
-        vec!["_windows", "sample_project.xml"]
-            .into_iter()
-            .collect::<PathBuf>(),
-    );
+    let bin_dir = vec![&install_path.display().to_string(), "_windows", "win32"].into_iter().collect::<PathBuf>();
+    let workshop_upload_bin = Path::join(&bin_dir, Path::new("steam_workshop_upload.exe"));
+    // let base_xml_path = Path::join(
+    //     install_path,
+    //     vec!["_windows", "win32", "sample_project.xml"]
+    //         .into_iter()
+    //         .collect::<PathBuf>(),
+    // );
 
     // automatically run steam_workshop_tool.exe to generate a sample project file
     // this saved embedding it and adding extra dependencies for a project.xml template
-    if !Path::exists(&base_xml_path) {
-        let bin_dir = Path::join(install_path, Path::new("_windows"));
-        let bin_path = Path::join(&bin_dir, Path::new("steam_workshop_upload.exe"));
-
+    if !Path::exists(&workshop_upload_bin) {
         info!("Running steam_workshop_upload.exe to generate sample_project.xml");
         debug!("_windows directory path: {}", &bin_dir.display());
-        debug!("steam_workshop_upload.exe path: {}", &bin_path.display());
+        debug!("steam_workshop_upload.exe path: {}", &workshop_upload_bin.display());
 
-        match Command::new(bin_path)
+        match Command::new(workshop_upload_bin)
             .current_dir(&bin_dir)
             .stdin(Stdio::piped())
             .stdout(Stdio::null())
@@ -265,6 +268,7 @@ pub fn render_project_xml(install_path: &Path, mod_path: &Path) -> Result<String
     }
 
     // read template content for later updating
+    let base_xml_path = Path::join(&bin_dir, Path::new("sample_project.xml"));
     let base_xml_content = match fs::read_to_string(base_xml_path) {
         Ok(content) => content,
         Err(_) => {
@@ -356,13 +360,13 @@ pub fn render_audio_json(data: String) -> String {
 
 /// Convert and export localization strings to the proper game file
 pub fn run_workshop_tool(install_path: &Path, mod_path: &Path) {
-    let bin_dir = Path::join(install_path, Path::new("_windows"));
-    let bin_path = Path::join(&bin_dir, Path::new("steam_workshop_upload.exe"));
+    let bin_dir = vec![&install_path.display().to_string(), "_windows", "win32"].into_iter().collect::<PathBuf>();
+    let workshop_upload_bin = Path::join(&bin_dir, Path::new("steam_workshop_upload.exe"));
 
-    debug!("{}", &bin_path.display());
+    debug!("{}", &bin_dir.display());
 
-    if bin_path.exists() {
-        match Command::new(bin_path)
+    if bin_dir.exists() {
+        match Command::new(workshop_upload_bin)
             .arg("project.xml")
             .current_dir(mod_path)
             .stdin(Stdio::piped())

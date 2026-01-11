@@ -6,6 +6,7 @@ slint::include_modules!();
 
 use chrono::Datelike;
 use clap::Parser;
+use std::collections::HashMap;
 use log::*;
 use rand::{Rng, distr::Alphanumeric, rng, rngs::StdRng};
 use rand_pcg::Pcg64;
@@ -75,7 +76,8 @@ fn main() -> Result<(), slint::PlatformError> {
             "Installation path does not exist or is not a directory. Please use '...' button to select installation directory."
         );
         // Set empty game directory in UI
-        app_window.as_weak().unwrap().set_game_dir("".into());
+        app_window.as_weak().unwrap().set_game_dir("AUTODETECT_FAILED".into());
+        app_window.as_weak().unwrap().set_status_text("Autodetection failed for game installation.".into());
     } else {
         // Set detected game directory in UI
         app_window
@@ -84,9 +86,9 @@ fn main() -> Result<(), slint::PlatformError> {
             .set_game_dir(install_path.clone().into());
     }
 
-    // Return a dictionarty of paths for the various game and mod data directories.
-    // This shouldn't fail but if it does exit early since these paths are required.
-    let gpaths: GamePath = match helpers::get_data_dirs(&install_path) {
+    // Return a dictionary of paths for the various game and mod data directories.
+    // Used for initial UI setup; paths are regenerated when Enable is clicked.
+    match helpers::get_data_dirs(&install_path) {
         Ok(paths) => {
             debug!("{:#?}", paths);
             info!("Mod directory will be:\'{}\'", paths.mod_dir.display());
@@ -102,12 +104,18 @@ fn main() -> Result<(), slint::PlatformError> {
                 "Unable to obtain assemble required game and mod paths\nReason: {}",
                 e
             );
-            std::process::exit(1);
+            GamePath {
+                base: PathBuf::new(),
+                base_dungeon: HashMap::new(),
+                base_heroes: HashMap::new(),
+                mod_dir: PathBuf::new(),
+                mod_dungeon: PathBuf::new(),
+                mod_localization: PathBuf::new(),
+                mod_heroes: PathBuf::new(),
+            }
         }
     };
 
-    let ui_handle = app_window.as_weak();
-    ui_handle.unwrap().set_game_dir(install_path.clone().into());
     // If the user cancels the open file dialog a `None` result is returned which is invalid.
     // In these cases rather than crash store and reuse the last selected directory.
     // When a new valid directory is selected the mod directory will be assembled from it.
@@ -151,23 +159,39 @@ fn main() -> Result<(), slint::PlatformError> {
     });
 
     let ui_handle = app_window.as_weak();
-    let game_paths = gpaths.clone();
     app_window.on_enable_clicked(move || {
         let handle = ui_handle.unwrap();
-        handle.set_status_text("Starting randomization, please wait.".into());
-        enable_mod(&handle, &game_paths);
-        handle.set_is_mod_installed(true);
-        handle.set_status_text("ddrand mod installed successfully.".into());
+        let game_dir = handle.get_game_dir().to_string();
+        match helpers::get_data_dirs(&game_dir) {
+            Ok(game_paths) => {
+                handle.set_status_text("Starting randomization, please wait.".into());
+                enable_mod(&handle, &game_paths);
+                handle.set_is_mod_installed(true);
+                handle.set_status_text("ddrand mod installed successfully.".into());
+            }
+            Err(e) => {
+                error!("Unable to assemble game paths: {}", e);
+                handle.set_status_text("Error: Invalid game directory.".into());
+            }
+        }
     });
 
     let ui_handle = app_window.as_weak();
-    let game_paths = gpaths.clone();
     app_window.on_enable_clicked_confirmed(move || {
         let handle = ui_handle.unwrap();
-        handle.set_status_text("Starting randomization, please wait.".into());
-        enable_mod(&handle, &game_paths);
-        handle.set_is_mod_installed(true);
-        handle.set_status_text("ddrand mod installed successfully.".into());
+        let game_dir = handle.get_game_dir().to_string();
+        match helpers::get_data_dirs(&game_dir) {
+            Ok(game_paths) => {
+                handle.set_status_text("Starting randomization, please wait.".into());
+                enable_mod(&handle, &game_paths);
+                handle.set_is_mod_installed(true);
+                handle.set_status_text("ddrand mod installed successfully.".into());
+            }
+            Err(e) => {
+                error!("Unable to assemble game paths: {}", e);
+                handle.set_status_text("Error: Invalid game directory.".into());
+            }
+        }
     });
     let ui_handle = app_window.as_weak();
     app_window.on_disable_clicked_confirmed(move || {
@@ -319,8 +343,8 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
                 std::process::exit(1);
             }
         }
-        if let Ok(files) = rand_mash::get_data_files(&gpaths.base_dungeon, &None) {
-            if let Ok(mashes) = rand_mash::extract_data(&files) {
+        if let Ok(files) = rand_mash::get_data_files(&gpaths.base_dungeon, &None)
+            && let Ok(mashes) = rand_mash::extract_data(&files) {
                 rand_mash::randomize(
                     &gpaths.mod_dungeon,
                     mashes,
@@ -329,7 +353,6 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
                     handle.get_rand_monster(),
                 );
             }
-        }
     }
 
     // Define the paths for the output audio JSON data.
