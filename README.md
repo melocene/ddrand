@@ -20,6 +20,7 @@ The following are included as options for randomization:
   - [Limitations](#limitations)
   - [Known Issues](#known-issues)
   - [Contributing](#contributing)
+  - [AI Policy](#ai-policy)
   - [Version Policy](#version-policy)
   - [License](#license)
 
@@ -93,6 +94,14 @@ Otherwise, all contributions are welcome and encouraged. Not a Rust developer? N
 can include bug reports or updated documentation as an example.
 
 For details specific to code contributions please see the [contribution guidelines](CONTRIBUTING.md).
+
+## AI Policy
+
+This project is, and should remain, written primarily by humans for humans. Regardless of development workflow used a human will review all submissions before they can or will be merged.
+
+However, generative AI is fast becoming a first-party feature in most development environments, including GitHub itself. If you use Generative AI to write the vast majority of your submission (e.g., agent-based or vibe coding) then you must document your use of AI in your pull request. Please include the service you used and/or model that generated the code.
+
+Undisclosed AI usage may result in code contirbutions being removed or the banning of a developer from contributing to this project.
 
 ## Version Policy
 
