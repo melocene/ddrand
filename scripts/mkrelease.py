@@ -68,8 +68,6 @@ with open("SHA256SUMS", "a") as sha256sums:
 os.chdir("..")
 
 if os.name == "nt":
-    shutil.make_archive(
-        output_file, "zip", root_dir=".", base_dir=proj_name
-    )
+    shutil.make_archive(output_file, "zip", root_dir=".", base_dir=proj_name)
 
 shutil.rmtree(proj_name)
