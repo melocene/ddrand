@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org).
 ### Fixed
 
 - Manual editing of the seed value no longer disables the `Generate` and `Weekly` buttons
+- Duplicate or empty log messages are no longer written to the logfile
 
 ## [0.3.0] - 2024-05-27
 
