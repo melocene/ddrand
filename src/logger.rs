@@ -11,7 +11,7 @@ pub fn init(level: LevelFilter, log_file: Option<&str>) -> Result<(), Box<dyn st
             Ok(log_file_path) => {
                 let log_file = tracing_subscriber::fmt::layer()
                     .with_ansi(false)
-                    .with_timer(ChronoLocal::rfc_3339())
+                    .with_timer(ChronoLocal::new("%Y-%m-%d %H:%M:%S".to_string()))
                     .with_target(false)
                     .with_writer(log_file_path)
                     .compact()
