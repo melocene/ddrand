@@ -189,7 +189,7 @@ fn enable_handler(handle: &AppWindow) {
     match helpers::get_data_dirs(&game_dir) {
         Ok(game_paths) => {
             handle.set_status_text("Starting randomization, please wait.".into());
-            enable_mod(&handle, &game_paths);
+            enable_mod(handle, &game_paths);
             handle.set_is_mod_installed(true);
             handle.set_status_text("ddrand mod installed successfully.".into());
         }
