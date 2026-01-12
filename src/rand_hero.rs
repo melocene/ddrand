@@ -245,7 +245,6 @@ pub fn randomize(
         // needed as the game requires each hero to have the proper keys in the files otherwise
         // it cannot properly render skill names
         let mut align: HashMap<String, String> = HashMap::new();
-        debug!("{:#?}", &align);
 
         // pick a skill group randomly for the current hero and write the new skill data
         // remove the chosen groups to avoid duplicates being assigned

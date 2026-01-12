@@ -4,28 +4,27 @@ permissions:
   contents: read
 
 on:
-  push:
-    branches:
-      - dev
   pull_request:
-    branches:
-      - dev
+    types: [opened, synchronize, reopened]
 
 jobs:
   clippy:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@7d986dd989559c6ecdb630a3fd2557667be217ad # v0.0.9
+        # Workaround for a bug where Windows runners were not using the cache
+        # Ref: https://github.com/Mozilla-Actions/sccache-action/issues/177#issuecomment-2928104810
+      - name: Tell sccache to use Actions cache
+        run: Add-Content -Path $env:GITHUB_ENV -Value "SCCACHE_GHA_ENABLED=true"
       - run: cargo clippy -- -Dwarnings
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: sccache
 
   fmt:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - run: cargo fmt -- --check

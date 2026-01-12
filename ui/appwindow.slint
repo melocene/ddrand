@@ -2,7 +2,7 @@ import { Button, CheckBox, GroupBox, HorizontalBox, LineEdit, VerticalBox, Stand
 
 export component AppWindow inherits Window {
     title: app-window-title;
-    height: 470px;
+    height: 450px;
     width: 512px;
     default-font-size: 14px;
     callback select-dir();
@@ -27,7 +27,7 @@ export component AppWindow inherits Window {
             text: "** This is not an official product of Red Hook Studios or Darkest Dungeon **";
             color: Colors.red;
             font-weight: 500;
-            horizontal-alignment: center;
+            horizontal-alignment: left;
         }
 
         HorizontalBox {
@@ -35,7 +35,8 @@ export component AppWindow inherits Window {
                 text: "Game Directory:";
                 height: 24px;
                 font-weight: 640;
-                vertical-alignment: center;
+                vertical-alignment: bottom;
+                horizontal-alignment: left;
             }
 
             LineEdit {
@@ -57,7 +58,8 @@ export component AppWindow inherits Window {
                 text: "Mod Directory:";
                 height: 24px;
                 font-weight: 640;
-                vertical-alignment: center;
+                vertical-alignment: bottom;
+                horizontal-alignment: left;
             }
 
             LineEdit {
@@ -73,7 +75,7 @@ export component AppWindow inherits Window {
                     text: "Seed:";
                     height: 24px;
                     font-weight: 640;
-                    vertical-alignment: center;
+                    vertical-alignment: bottom;
                     horizontal-alignment: left;
                 }
 
@@ -103,9 +105,16 @@ export component AppWindow inherits Window {
             }
         }
 
-        HorizontalBox {
-            GroupBox {
-                title: "Randomize:";
+        VerticalBox {
+            Text {
+                text: "Randomize:";
+                height: 24px;
+                font-weight: 640;
+                vertical-alignment: center;
+                horizontal-alignment: left;
+            }
+
+            HorizontalBox {
                 // Currently disabled due to duplicate spawns when used with monster randomization.
                 // CheckBox {
                 //     text: "Bosses";

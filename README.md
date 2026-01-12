@@ -20,6 +20,7 @@ The following are included as options for randomization:
   - [Limitations](#limitations)
   - [Known Issues](#known-issues)
   - [Contributing](#contributing)
+  - [AI Policy](#ai-policy)
   - [Version Policy](#version-policy)
   - [License](#license)
 
@@ -60,7 +61,8 @@ running seed a `seed.txt` file can be found in the mod installation directory. T
 display it on screen, or via a bot command, when streaming the game for viewer reference.
 
 A log file will be written to the directory `ddrand` was run from. In the event of an issue starting `ddrand` from the command line 
-with with the `-d` or `--debug` options will log additional information.
+with with the `-d` or `--debug` options will log additional information. Compiling the application in debug mode will also enable 
+debug logging without needing the additional flag.
 
 ## Compatibility
 
@@ -94,6 +96,14 @@ can include bug reports or updated documentation as an example.
 
 For details specific to code contributions please see the [contribution guidelines](CONTRIBUTING.md).
 
+## AI Policy
+
+This project is, and should remain, written primarily by humans for humans. Regardless of development workflow used a human will review all submissions before they can or will be merged.
+
+However, generative AI is fast becoming a first-party feature in most development environments, including GitHub itself. If you use Generative AI to write the vast majority of your submission (e.g., agent-based or vibe coding) then you must document your use of AI in your pull request. Please include the service you used and/or model that generated the code. Ensure any AI usage adheres to any license or other restrictions which may apply.
+
+Undisclosed AI usage may result in code contirbutions being removed or the banning of a developer from contributing to this project.
+
 ## Version Policy
 
 This project adheres to [Semantic Versioning](https://semver.org).
@@ -102,7 +112,7 @@ All notable changes to this project can be found in the [changelog](CHANGELOG.md
 
 ## License
 
-Copyright (c) 2024-2025 [ddrand developers](https://github.com/melocene/ddrand/)
+Copyright (c) 2024-2026 [ddrand developers](https://github.com/melocene/ddrand/)
 
 `ddrand` is released under the GPLv3 license.
 

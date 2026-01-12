@@ -1,4 +1,5 @@
 use std::fs::OpenOptions;
+use tracing_appender::non_blocking;
 use tracing_subscriber::{filter::LevelFilter, fmt::time::ChronoLocal, prelude::*};
 
 pub fn init(level: LevelFilter, log_file: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
@@ -9,11 +10,12 @@ pub fn init(level: LevelFilter, log_file: Option<&str>) -> Result<(), Box<dyn st
     if let Some(fname) = log_file {
         match OpenOptions::new().append(true).create(true).open(fname) {
             Ok(log_file_path) => {
+                let (non_blocking, _guard) = non_blocking(log_file_path);
                 let log_file = tracing_subscriber::fmt::layer()
                     .with_ansi(false)
-                    .with_timer(ChronoLocal::rfc_3339())
+                    .with_timer(ChronoLocal::new("%Y-%m-%d %H:%M:%S".to_string()))
                     .with_target(false)
-                    .with_writer(log_file_path)
+                    .with_writer(non_blocking)
                     .compact()
                     .with_filter(level)
                     .boxed();

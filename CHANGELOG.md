@@ -4,11 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com),
 and this project adheres to [Semantic Versioning](https://semver.org).
 
-## [0.3.1] - Unreleased
+## [ ] - Unreleased
+
+## [0.3.1] - 2026-01-12
+
+### Changed
+
+- [dev] Enable and confirmation paths now share the same install flow for consistent behavior
 
 ### Fixed
 
 - Manual editing of the seed value no longer disables the `Generate` and `Weekly` buttons
+- Duplicate or empty log messages are no longer written to the logfile
+- Seed file is now written after the mod directory is created, preventing missing seed.txt on install
 
 ## [0.3.0] - 2024-05-27
 

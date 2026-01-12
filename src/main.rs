@@ -11,6 +11,7 @@ use rand::{Rng, distr::Alphanumeric, rng, rngs::StdRng};
 use rand_pcg::Pcg64;
 use rand_seeder::Seeder;
 use rfd::FileDialog;
+use std::collections::HashMap;
 use std::{
     env, fs,
     io::Write,
@@ -75,7 +76,9 @@ fn main() -> Result<(), slint::PlatformError> {
             "Installation path does not exist or is not a directory. Please use '...' button to select installation directory."
         );
         // Set empty game directory in UI
-        app_window.as_weak().unwrap().set_game_dir("".into());
+        let window = app_window.as_weak().unwrap();
+        window.set_game_dir("AUTODETECT_FAILED".into());
+        window.set_status_text("Autodetection failed for game installation.".into());
     } else {
         // Set detected game directory in UI
         app_window
@@ -84,11 +87,10 @@ fn main() -> Result<(), slint::PlatformError> {
             .set_game_dir(install_path.clone().into());
     }
 
-    // Return a dictionarty of paths for the various game and mod data directories.
-    // This shouldn't fail but if it does exit early since these paths are required.
-    let gpaths: GamePath = match helpers::get_data_dirs(&install_path) {
+    // Return a dictionary of paths for the various game and mod data directories.
+    // Used for initial UI setup; paths are regenerated when Enable is clicked.
+    match helpers::get_data_dirs(&install_path) {
         Ok(paths) => {
-            debug!("{:#?}", paths);
             info!("Mod directory will be:\'{}\'", paths.mod_dir.display());
             app_window.set_mod_dir(paths.mod_dir.display().to_string().into());
             // If the mod directory exist, assume the mod is installed and enable disable button.
@@ -102,12 +104,18 @@ fn main() -> Result<(), slint::PlatformError> {
                 "Unable to obtain assemble required game and mod paths\nReason: {}",
                 e
             );
-            std::process::exit(1);
+            GamePath {
+                base: PathBuf::new(),
+                base_dungeon: HashMap::new(),
+                base_heroes: HashMap::new(),
+                mod_dir: PathBuf::new(),
+                mod_dungeon: PathBuf::new(),
+                mod_localization: PathBuf::new(),
+                mod_heroes: PathBuf::new(),
+            }
         }
     };
 
-    let ui_handle = app_window.as_weak();
-    ui_handle.unwrap().set_game_dir(install_path.clone().into());
     // If the user cancels the open file dialog a `None` result is returned which is invalid.
     // In these cases rather than crash store and reuse the last selected directory.
     // When a new valid directory is selected the mod directory will be assembled from it.
@@ -139,11 +147,13 @@ fn main() -> Result<(), slint::PlatformError> {
     // Weekly seed button will allow a consistent seed based on the week number.
     let ui_handle = app_window.as_weak();
     ui_handle.unwrap().set_seed_value(generate_clicked().into());
+
     let ui_handle = app_window.as_weak();
     app_window.on_generate_clicked(move || {
         let app_window = ui_handle.unwrap();
         app_window.set_seed_value(generate_clicked().into());
     });
+
     let ui_handle = app_window.as_weak();
     app_window.on_weekly_clicked(move || {
         let app_window = ui_handle.unwrap();
@@ -151,34 +161,43 @@ fn main() -> Result<(), slint::PlatformError> {
     });
 
     let ui_handle = app_window.as_weak();
-    let game_paths = gpaths.clone();
-    app_window.on_enable_clicked(move || {
-        let handle = ui_handle.unwrap();
-        handle.set_status_text("Starting randomization, please wait.".into());
-        enable_mod(&handle, &game_paths);
-        handle.set_is_mod_installed(true);
-        handle.set_status_text("ddrand mod installed successfully.".into());
+    app_window.on_enable_clicked({
+        let ui_handle = ui_handle.clone();
+        move || enable_handler(&ui_handle.unwrap())
     });
 
     let ui_handle = app_window.as_weak();
-    let game_paths = gpaths.clone();
-    app_window.on_enable_clicked_confirmed(move || {
-        let handle = ui_handle.unwrap();
-        handle.set_status_text("Starting randomization, please wait.".into());
-        enable_mod(&handle, &game_paths);
-        handle.set_is_mod_installed(true);
-        handle.set_status_text("ddrand mod installed successfully.".into());
+    app_window.on_enable_clicked_confirmed({
+        let ui_handle = ui_handle.clone();
+        move || enable_handler(&ui_handle.unwrap())
     });
+
     let ui_handle = app_window.as_weak();
     app_window.on_disable_clicked_confirmed(move || {
         let handle = ui_handle.unwrap();
         handle.set_status_text("Starting uninstallation, please wait.".into());
-        helpers::uninstall_mod(Path::new(&ui_handle.unwrap().get_mod_dir().to_string()));
+        helpers::uninstall_mod(Path::new(&handle.get_mod_dir().to_string()));
         handle.set_is_mod_installed(false);
         handle.set_status_text("ddrand mod uninstalled successfully.".into());
     });
 
     app_window.run()
+}
+
+fn enable_handler(handle: &AppWindow) {
+    let game_dir = handle.get_game_dir().to_string();
+    match helpers::get_data_dirs(&game_dir) {
+        Ok(game_paths) => {
+            handle.set_status_text("Starting randomization, please wait.".into());
+            enable_mod(handle, &game_paths);
+            handle.set_is_mod_installed(true);
+            handle.set_status_text("ddrand mod installed successfully.".into());
+        }
+        Err(e) => {
+            error!("Unable to assemble game paths: {}", e);
+            handle.set_status_text("Error: Invalid game directory.".into());
+        }
+    }
 }
 
 /// Callback to generate a 32 character string to use as an input seed for the random number generator.
@@ -221,6 +240,11 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
     // If this fails just warn and continue as it is not required and is already displayed in the GUI.
     let seed_val = handle.get_seed_value().to_string();
     info!("Using seed: {}", &seed_val);
+
+    // create the new StdRng from the provided seed value
+    let seed_rng: StdRng = Seeder::from(&seed_val).into_rng();
+
+    helpers::install_mod(&mod_dir, &mode_localization_dir);
     let seed_file_path = Path::join(&gpaths.mod_dir, "seed.txt");
     if let Err(e) = fs::File::create(&seed_file_path)
         .and_then(|mut seed_file| seed_file.write_all(seed_val.as_bytes()))
@@ -233,11 +257,6 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
     } else {
         info!("Seed written to '{}'", &seed_file_path.display());
     }
-
-    // create the new StdRng from the provided seed value
-    let seed_rng: StdRng = Seeder::from(&seed_val).into_rng();
-
-    helpers::install_mod(&mod_dir, &mode_localization_dir);
 
     if handle.get_rand_combat_skills() {
         // Attempt to create the nessesary directory and exit if this fails as it is required.
@@ -319,16 +338,16 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
                 std::process::exit(1);
             }
         }
-        if let Ok(files) = rand_mash::get_data_files(&gpaths.base_dungeon, &None) {
-            if let Ok(mashes) = rand_mash::extract_data(&files) {
-                rand_mash::randomize(
-                    &gpaths.mod_dungeon,
-                    mashes,
-                    seed_rng,
-                    handle.get_rand_boss(),
-                    handle.get_rand_monster(),
-                );
-            }
+        if let Ok(files) = rand_mash::get_data_files(&gpaths.base_dungeon, &None)
+            && let Ok(mashes) = rand_mash::extract_data(&files)
+        {
+            rand_mash::randomize(
+                &gpaths.mod_dungeon,
+                mashes,
+                seed_rng,
+                handle.get_rand_boss(),
+                handle.get_rand_monster(),
+            );
         }
     }
 
@@ -389,35 +408,6 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
             // exit if the project.xml cannot be rendered as it is required by the game
             // without it the mod will fail to be recognized and loaded
             error!("Unable to render project data\nReason: {}", e);
-            std::process::exit(1);
-        }
-    }
-
-    // attempt to write the seed to a file in the rand_hero mod directory
-    // if this fails just warn and continue as it is not required and is already logged to the console
-    let seed_file_path = Path::join(&PathBuf::from(&mod_dir), "seed.txt");
-    if let Err(e) = fs::File::create(&seed_file_path).and_then(|mut seed_file| {
-        seed_file.write_all(handle.get_seed_value().to_string().as_bytes())
-    }) {
-        warn!(
-            "Unable to write seed to file {}\n Reason: {}",
-            &seed_file_path.to_str().unwrap(),
-            e
-        );
-    } else {
-        info!("Seed written to '{}'", &seed_file_path.display());
-    }
-
-    // Attempt to create directory structure for boss and spawn randomization.
-    // These are required for this option so exit early if not successful.
-    match fs::create_dir_all(&gpaths.mod_dungeon) {
-        Ok(_) => debug!("Created directory: {}", &gpaths.mod_dungeon.display()),
-        Err(e) => {
-            error!(
-                "Could not create directory: {}\nReason: {}",
-                &gpaths.mod_dungeon.display(),
-                e
-            );
             std::process::exit(1);
         }
     }
