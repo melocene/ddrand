@@ -9,12 +9,6 @@ on:
     - cron: '0 4 * * 2' # weekly at 0400 on Tuesday
   pull_request:
     types: [opened, synchronize, reopened]
-  push:
-    paths: 
-      - '**/Cargo.toml'
-      - '**/Cargo.lock'
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
 
 jobs:
   security_audit:
