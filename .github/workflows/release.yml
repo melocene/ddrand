@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
       - name: Run sccache-cache
-        uses: mozilla-actions/sccache-action@v0.0.9
+        uses: mozilla-actions/sccache-action@7d986dd989559c6ecdb630a3fd2557667be217ad #v0.0.9
         # Workaround for a bug where Windows runners were not using the cache
         # Ref: https://github.com/Mozilla-Actions/sccache-action/issues/177#issuecomment-2928104810
       - name: Tell sccache to use Actions cache
