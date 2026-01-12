@@ -159,17 +159,23 @@ export component AppWindow inherits Window {
             }
         }
 
-        // "Status Bar"
+        // Status bar
         Rectangle {
-            background: Colors.grey;
-            height: 24px;
+            background: root.background;
+            border-color: Colors.grey;
+            border-width: 1px;
+            height: 28px;
             width: 100%;
             Text {
-                //x: 16px;
-                x: parent.width / 32;
-                y: parent.height / 4;
-                color: root.background;
+                x: 12px;
+                width: parent.width - 24px;
+                height: parent.height;
+                vertical-alignment: center;
+                horizontal-alignment: left;
                 text: root.status-text;
+                wrap: no-wrap;
+                overflow: elide;
+                font-weight: 600;
             }
         }
     }
