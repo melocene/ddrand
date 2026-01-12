@@ -6,12 +6,12 @@ slint::include_modules!();
 
 use chrono::Datelike;
 use clap::Parser;
-use std::collections::HashMap;
 use log::*;
 use rand::{Rng, distr::Alphanumeric, rng, rngs::StdRng};
 use rand_pcg::Pcg64;
 use rand_seeder::Seeder;
 use rfd::FileDialog;
+use std::collections::HashMap;
 use std::{
     env, fs,
     io::Write,
@@ -76,8 +76,9 @@ fn main() -> Result<(), slint::PlatformError> {
             "Installation path does not exist or is not a directory. Please use '...' button to select installation directory."
         );
         // Set empty game directory in UI
-        app_window.as_weak().unwrap().set_game_dir("AUTODETECT_FAILED".into());
-        app_window.as_weak().unwrap().set_status_text("Autodetection failed for game installation.".into());
+        let window = app_window.as_weak().unwrap();
+        window.set_game_dir("AUTODETECT_FAILED".into());
+        window.set_status_text("Autodetection failed for game installation.".into());
     } else {
         // Set detected game directory in UI
         app_window
@@ -146,11 +147,13 @@ fn main() -> Result<(), slint::PlatformError> {
     // Weekly seed button will allow a consistent seed based on the week number.
     let ui_handle = app_window.as_weak();
     ui_handle.unwrap().set_seed_value(generate_clicked().into());
+
     let ui_handle = app_window.as_weak();
     app_window.on_generate_clicked(move || {
         let app_window = ui_handle.unwrap();
         app_window.set_seed_value(generate_clicked().into());
     });
+
     let ui_handle = app_window.as_weak();
     app_window.on_weekly_clicked(move || {
         let app_window = ui_handle.unwrap();
@@ -173,7 +176,7 @@ fn main() -> Result<(), slint::PlatformError> {
     app_window.on_disable_clicked_confirmed(move || {
         let handle = ui_handle.unwrap();
         handle.set_status_text("Starting uninstallation, please wait.".into());
-        helpers::uninstall_mod(Path::new(&ui_handle.unwrap().get_mod_dir().to_string()));
+        helpers::uninstall_mod(Path::new(&handle.get_mod_dir().to_string()));
         handle.set_is_mod_installed(false);
         handle.set_status_text("ddrand mod uninstalled successfully.".into());
     });
@@ -336,15 +339,16 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
             }
         }
         if let Ok(files) = rand_mash::get_data_files(&gpaths.base_dungeon, &None)
-            && let Ok(mashes) = rand_mash::extract_data(&files) {
-                rand_mash::randomize(
-                    &gpaths.mod_dungeon,
-                    mashes,
-                    seed_rng,
-                    handle.get_rand_boss(),
-                    handle.get_rand_monster(),
-                );
-            }
+            && let Ok(mashes) = rand_mash::extract_data(&files)
+        {
+            rand_mash::randomize(
+                &gpaths.mod_dungeon,
+                mashes,
+                seed_rng,
+                handle.get_rand_boss(),
+                handle.get_rand_monster(),
+            );
+        }
     }
 
     // Define the paths for the output audio JSON data.

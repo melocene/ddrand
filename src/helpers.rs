@@ -1,7 +1,6 @@
 use log::*;
 use regex::Regex;
 use remove_dir_all::*;
-use winreg::{enums::HKEY_LOCAL_MACHINE, RegKey};
 use std::collections::HashMap;
 use std::error::Error;
 use std::{
@@ -10,6 +9,7 @@ use std::{
     process::{Command, Stdio, exit},
     thread,
 };
+use winreg::{RegKey, enums::HKEY_LOCAL_MACHINE};
 
 /// Collection of paths for the base game and randomizer mod
 #[derive(Debug, Clone)]
@@ -235,7 +235,9 @@ pub fn uninstall_mod(mod_dir: &Path) {
 
 /// Render mod project.xml template
 pub fn render_project_xml(install_path: &Path, mod_path: &Path) -> Result<String, Box<dyn Error>> {
-    let bin_dir = vec![&install_path.display().to_string(), "_windows", "win32"].into_iter().collect::<PathBuf>();
+    let bin_dir = vec![&install_path.display().to_string(), "_windows", "win32"]
+        .into_iter()
+        .collect::<PathBuf>();
     let workshop_upload_bin = Path::join(&bin_dir, Path::new("steam_workshop_upload.exe"));
     // let base_xml_path = Path::join(
     //     install_path,
@@ -249,7 +251,10 @@ pub fn render_project_xml(install_path: &Path, mod_path: &Path) -> Result<String
     if !Path::exists(&workshop_upload_bin) {
         info!("Running steam_workshop_upload.exe to generate sample_project.xml");
         debug!("_windows directory path: {}", &bin_dir.display());
-        debug!("steam_workshop_upload.exe path: {}", &workshop_upload_bin.display());
+        debug!(
+            "steam_workshop_upload.exe path: {}",
+            &workshop_upload_bin.display()
+        );
 
         match Command::new(workshop_upload_bin)
             .current_dir(&bin_dir)
@@ -360,7 +365,9 @@ pub fn render_audio_json(data: String) -> String {
 
 /// Convert and export localization strings to the proper game file
 pub fn run_workshop_tool(install_path: &Path, mod_path: &Path) {
-    let bin_dir = vec![&install_path.display().to_string(), "_windows", "win32"].into_iter().collect::<PathBuf>();
+    let bin_dir = vec![&install_path.display().to_string(), "_windows", "win32"]
+        .into_iter()
+        .collect::<PathBuf>();
     let workshop_upload_bin = Path::join(&bin_dir, Path::new("steam_workshop_upload.exe"));
 
     debug!("{}", &bin_dir.display());
