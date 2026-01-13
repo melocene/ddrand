@@ -9,7 +9,6 @@ use std::{
     process::{Command, Stdio, exit},
     thread,
 };
-use winreg::{RegKey, enums::HKEY_LOCAL_MACHINE};
 
 /// Collection of paths for the base game and randomizer mod
 #[derive(Debug, Clone)]
@@ -23,35 +22,12 @@ pub struct GamePath {
     pub mod_heroes: PathBuf,
 }
 
-/// Attempt automated discovery of the game installation path based on OS
-pub fn get_install_path() -> Result<String, Box<dyn std::error::Error>> {
-    let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
-    let install_path = match hklm
-        .open_subkey(r#"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 262060"#)
-    {
-        Ok(key_path) => key_path.get_value("InstallLocation")?,
-        Err(_) => {
-            // attempt to use the default installation location if unable to read from the registry
-            // if the path doesn't exist or is not a proper directory return an empty string for later filtering
-            let default_dir_str = r#"C:\Program Files (x86)\Steam\steamapps\common\DarkestDungeon"#;
-            let default_dir_path = Path::new(&default_dir_str);
-            if Path::exists(default_dir_path) && Path::is_dir(default_dir_path) {
-                String::from(default_dir_str)
-            } else {
-                String::new()
-            }
-        }
-    };
-
-    Ok(install_path)
-}
-
 /// Get all hero directories from the install path
-pub fn get_data_dirs(install_dir: &String) -> Result<GamePath, Box<dyn Error>> {
+pub fn get_data_dirs(install_dir: &Path) -> Result<GamePath, Box<dyn Error>> {
     // Early validation: check if install_dir is valid before attempting directory reads
-    let install_path = Path::new(install_dir);
-    if install_dir.is_empty() || !install_path.exists() || !install_path.is_dir() {
-        return Err(format!("Invalid or missing install directory: '{}'", install_dir).into());
+    //let install_path = Path::new(install_dir);
+    if !install_dir.exists() || !install_dir.is_dir() {
+        return Err(format!("Invalid or missing install directory: '{}'", install_dir.display()).into());
     }
 
     let valid_dungeon_names: &[String] = &[
@@ -61,9 +37,9 @@ pub fn get_data_dirs(install_dir: &String) -> Result<GamePath, Box<dyn Error>> {
         String::from("weald"),
     ];
     // this is a mess but assemble all the paths where the base hero data can be found
-    let dungeon_subdir: PathBuf = Path::join(Path::new(&install_dir), Path::new("dungeons"));
-    let hero_subdir: PathBuf = Path::join(Path::new(&install_dir), Path::new("heroes"));
-    let dlc_subdir: PathBuf = Path::join(Path::new(&install_dir), Path::new("dlc"));
+    let dungeon_subdir = install_dir.join("dungeons");
+    let hero_subdir = install_dir.join("heroes");
+    let dlc_subdir = install_dir.join("dlc");
 
     let mut dmap: HashMap<String, PathBuf> = HashMap::new();
     match fs::read_dir(dungeon_subdir) {
@@ -107,30 +83,24 @@ pub fn get_data_dirs(install_dir: &String) -> Result<GamePath, Box<dyn Error>> {
                                 debug!("Checking {} for hero data", &dir_path.to_string_lossy());
                                 // DLC heroes have odd paths so sort them out separately if they are not excluded
                                 if dir_name.contains("musketeer") {
-                                    let msubdir: PathBuf =
-                                        vec!["445700_musketeer", "heroes", "musketeer"]
-                                            .into_iter()
-                                            .collect();
-                                    let msubdir_path = Path::join(&dlc_subdir, msubdir);
+                                    let msubdir_path = dlc_subdir
+                                        .join("445700_musketeer")
+                                        .join("heroes")
+                                        .join("musketeer");
                                     hmap.insert(String::from("musketeer"), msubdir_path);
                                 } else if dir_name.contains("crimson_court") {
-                                    let fsubdir: PathBuf = vec![
-                                        "580100_crimson_court",
-                                        "features",
-                                        "flagellant",
-                                        "heroes",
-                                        "flagellant",
-                                    ]
-                                    .into_iter()
-                                    .collect();
-                                    let fsubdir_path = Path::join(&dlc_subdir, &fsubdir);
+                                    let fsubdir_path = dlc_subdir
+                                        .join("580100_crimson_court")
+                                        .join("features")
+                                        .join("flagellant")
+                                        .join("heroes")
+                                        .join("flagellant");
                                     hmap.insert(String::from("flagellant"), fsubdir_path);
                                 } else if dir_name.contains("shieldbreaker") {
-                                    let ssubdir: PathBuf =
-                                        vec!["702540_shieldbreaker", "heroes", "shieldbreaker"]
-                                            .into_iter()
-                                            .collect();
-                                    let ssubdir_path = Path::join(&dlc_subdir, &ssubdir);
+                                    let ssubdir_path = dlc_subdir
+                                        .join("702540_shieldbreaker")
+                                        .join("heroes")
+                                        .join("shieldbreaker");
                                     hmap.insert(String::from("shieldbreaker"), ssubdir_path);
                                 } else if dir_name.contains("arena") || dir_name.contains("madness")
                                 {
@@ -157,12 +127,10 @@ pub fn get_data_dirs(install_dir: &String) -> Result<GamePath, Box<dyn Error>> {
         }
     }
 
-    // avoid Rust typing issues and use a temporary variable for the proper mod subdirectory
-    let tmp_subdirs: PathBuf = vec!["mods", "ddrand"].into_iter().collect();
-    let randomizer_path: PathBuf = Path::join(&PathBuf::from(&install_dir), tmp_subdirs);
-    let mod_localization_path: PathBuf = Path::join(&randomizer_path, Path::new("localization"));
-    let mod_heroes_paths: PathBuf = Path::join(&randomizer_path, Path::new("heroes"));
-    let mod_dungeon_paths = Path::join(Path::new(&randomizer_path), Path::new("dungeons"));
+    let randomizer_path = install_dir.join("mods").join("ddrand");
+    let mod_localization_path = randomizer_path.join("localization");
+    let mod_heroes_paths = randomizer_path.join("heroes");
+    let mod_dungeon_paths = randomizer_path.join("dungeons");
 
     // new object holding all of the paths needed for the new mod files
     let game_paths: GamePath = GamePath {
@@ -180,13 +148,13 @@ pub fn get_data_dirs(install_dir: &String) -> Result<GamePath, Box<dyn Error>> {
     Ok(game_paths)
 }
 
-pub fn install_mod(mod_dir: &str, mod_locale_path: &str) {
+pub fn install_mod(mod_dir: &Path, mod_locale_path: &Path) {
     info!("Starting randomizer mod generation");
     info!("Creating randomizer mod directory structure");
-    for dir in &[mod_dir, mod_locale_path] {
+    for dir in [mod_dir, mod_locale_path] {
         match fs::create_dir_all(dir) {
-            Ok(_) => debug!("Created directory: {}", &dir),
-            Err(e) => error!("Could not create directory: {}\nReason: {}", &dir, e),
+            Ok(_) => debug!("Created directory: {}", dir.display()),
+            Err(e) => error!("Could not create directory: {}\nReason: {}", dir.display(), e),
         }
     }
 }
@@ -235,20 +203,12 @@ pub fn uninstall_mod(mod_dir: &Path) {
 
 /// Render mod project.xml template
 pub fn render_project_xml(install_path: &Path, mod_path: &Path) -> Result<String, Box<dyn Error>> {
-    let bin_dir = vec![&install_path.display().to_string(), "_windows", "win32"]
-        .into_iter()
-        .collect::<PathBuf>();
-    let workshop_upload_bin = Path::join(&bin_dir, Path::new("steam_workshop_upload.exe"));
-    // let base_xml_path = Path::join(
-    //     install_path,
-    //     vec!["_windows", "win32", "sample_project.xml"]
-    //         .into_iter()
-    //         .collect::<PathBuf>(),
-    // );
+    let bin_dir = install_path.join("_windows").join("win32");
+    let workshop_upload_bin = bin_dir.join("steam_workshop_upload.exe");
 
     // automatically run steam_workshop_tool.exe to generate a sample project file
     // this saved embedding it and adding extra dependencies for a project.xml template
-    if !Path::exists(&workshop_upload_bin) {
+    if !workshop_upload_bin.exists() {
         info!("Running steam_workshop_upload.exe to generate sample_project.xml");
         debug!("_windows directory path: {}", &bin_dir.display());
         debug!(
@@ -273,7 +233,7 @@ pub fn render_project_xml(install_path: &Path, mod_path: &Path) -> Result<String
     }
 
     // read template content for later updating
-    let base_xml_path = Path::join(&bin_dir, Path::new("sample_project.xml"));
+    let base_xml_path = bin_dir.join("sample_project.xml");
     let base_xml_content = match fs::read_to_string(base_xml_path) {
         Ok(content) => content,
         Err(_) => {
@@ -334,8 +294,8 @@ pub fn render_project_xml(install_path: &Path, mod_path: &Path) -> Result<String
 
 /// Read the default game audio load order JSON
 pub fn extract_audio_json(base_dir: &Path) -> Result<String, Box<dyn Error>> {
-    let base_audio_path = Path::join(base_dir, "audio");
-    let base_audio_file = Path::join(Path::new(&base_audio_path), "base.dungeon.load_order.json");
+    let base_audio_path = base_dir.join("audio");
+    let base_audio_file = base_audio_path.join("base.dungeon.load_order.json");
 
     // input file is tiny, no harm reading in the whole thing at once
     let content = fs::read_to_string(base_audio_file)?;
@@ -365,10 +325,8 @@ pub fn render_audio_json(data: String) -> String {
 
 /// Convert and export localization strings to the proper game file
 pub fn run_workshop_tool(install_path: &Path, mod_path: &Path) {
-    let bin_dir = vec![&install_path.display().to_string(), "_windows", "win32"]
-        .into_iter()
-        .collect::<PathBuf>();
-    let workshop_upload_bin = Path::join(&bin_dir, Path::new("steam_workshop_upload.exe"));
+    let bin_dir = install_path.join("_windows").join("win32");
+    let workshop_upload_bin = bin_dir.join("steam_workshop_upload.exe");
 
     debug!("{}", &bin_dir.display());
 
@@ -384,10 +342,10 @@ pub fn run_workshop_tool(install_path: &Path, mod_path: &Path) {
                 // the default output filename, which is not configurable, conflicts with the base game
                 // rename the mod localization output file to override only those values
                 // TODO: support non-English languages
-                let loc_path = Path::join(mod_path, Path::new("localization"));
-                let from_path = Path::join(&loc_path, Path::new("0_english.loc2"));
+                let loc_path = mod_path.join("localization");
+                let from_path = loc_path.join("0_english.loc2");
                 if from_path.exists() {
-                    let to_path = Path::join(&loc_path, Path::new("randomizer_english.loc2"));
+                    let to_path = loc_path.join("randomizer_english.loc2");
                     fs::rename(from_path, to_path).unwrap();
                 } else {
                     debug!("No localization data, skipping rename of non-existant file")
@@ -395,7 +353,7 @@ pub fn run_workshop_tool(install_path: &Path, mod_path: &Path) {
 
                 // if modfiles.txt is present renaming the localization file causes the game to crash due to name mismatch
                 // just remove it since it is only required if the mod is uploaded to the Steam workshop
-                let modfiles_txt_path = Path::join(mod_path, Path::new("modfiles.txt"));
+                let modfiles_txt_path = mod_path.join("modfiles.txt");
                 if fs::remove_file(modfiles_txt_path).is_ok() {
                     debug!("Removed modfiles.txt");
                 }
