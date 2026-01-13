@@ -34,17 +34,21 @@ const DARKEST_DUNGEON_APP_ID: u32 = 262060;
 // const STEAM_BIN: &str = "steam";
 
 fn main() -> Result<(), slint::PlatformError> {
+    let bin_version = if cfg!(debug_assertions) {
+        format!("{} DEVELOPMENT BUILD", env!("CARGO_BIN_NAME"))
+    } else {
+        format!("{} v{}", env!("CARGO_BIN_NAME"), env!("CARGO_PKG_VERSION"))
+    };
+    
     let app_window = AppWindow::new().unwrap();
     let opts = cli::Opts::parse();
 
     if opts.version {
-        println!("{} v{}", env!("CARGO_BIN_NAME"), env!("CARGO_PKG_VERSION"));
+        println!("{}",bin_version);
         std::process::exit(0);
     }
 
-    // Window title should match the binary's name and include the version information.
-    let window_title = format!("{} v{}", env!("CARGO_BIN_NAME"), env!("CARGO_PKG_VERSION"));
-    app_window.set_app_window_title(window_title.into());
+    app_window.set_app_window_title(bin_version.into());
     app_window.set_status_text("Application started.".into());
 
     // Setup the logger to use the application name and current date.
@@ -128,7 +132,7 @@ fn main() -> Result<(), slint::PlatformError> {
                 previous_game_dir = selected_dir.to_path_buf();
                 selected_dir
             }
-            None => PathBuf::from(previous_game_dir.clone()),
+            None => previous_game_dir.clone(),
         };
         ui_handle
             .unwrap()
@@ -209,7 +213,7 @@ fn launch_game() {
 
 fn enable_handler(handle: &AppWindow) {
     let game_dir = handle.get_game_dir().to_string();
-    match helpers::get_data_dirs(&Path::new(&game_dir)) {
+    match helpers::get_data_dirs(Path::new(&game_dir)) {
         Ok(game_paths) => {
             handle.set_status_text("Starting randomization, please wait.".into());
             let handle_weak = handle.as_weak();
@@ -246,12 +250,11 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
     let mod_dir = gpaths.mod_dir.display().to_string();
     //let mode_localization_dir = gpaths.mod_localization.display().to_string();
 
-    if handle.get_is_mod_installed() {
-        if let Err(e) = helpers::uninstall_mod(&gpaths.mod_dir) {
+    if handle.get_is_mod_installed()
+        && let Err(e) = helpers::uninstall_mod(&gpaths.mod_dir) {
             handle.set_status_text(format!("Error: {}", e).into());
             return;
         }
-    }
 
     // Attempt to write the seed to a file in the rand_hero mod directory.
     // If this fails just warn and continue as it is not required and is already displayed in the GUI.
