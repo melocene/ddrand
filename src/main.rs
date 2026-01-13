@@ -69,7 +69,7 @@ fn main() -> Result<(), slint::PlatformError> {
             normalized
         }
         Err(e) => {
-            error!("Autodetection failed for game installation.\nReason: {}", e);
+            warn!("Autodetection failed for game installation.\nReason: {}", e);
             PathBuf::new()
         }
     };
@@ -96,7 +96,7 @@ fn main() -> Result<(), slint::PlatformError> {
             paths
         }
         Err(e) => {
-            error!(
+            warn!(
                 "Unable to obtain assemble required game and mod paths\nReason: {}",
                 e
             );
@@ -172,9 +172,15 @@ fn main() -> Result<(), slint::PlatformError> {
     app_window.on_disable_clicked_confirmed(move || {
         let handle = ui_handle.unwrap();
         handle.set_status_text("Starting uninstallation, please wait.".into());
-        helpers::uninstall_mod(Path::new(&handle.get_mod_dir().to_string()));
-        handle.set_is_mod_installed(false);
-        handle.set_status_text("ddrand mod uninstalled successfully.".into());
+        match helpers::uninstall_mod(Path::new(&handle.get_mod_dir().to_string())) {
+            Ok(_) => {
+                handle.set_is_mod_installed(false);
+                handle.set_status_text("ddrand mod uninstalled successfully.".into());
+            }
+            Err(e) => {
+                handle.set_status_text(format!("Error: {}", e).into());
+            }
+        }
     });
 
     app_window.run()
@@ -190,7 +196,7 @@ fn enable_handler(handle: &AppWindow) {
             handle.set_status_text("ddrand mod installed successfully.".into());
         }
         Err(e) => {
-            error!("Unable to assemble game paths: {}", e);
+            warn!("Unable to assemble game paths: {}", e);
             handle.set_status_text("Error: Invalid game directory.".into());
         }
     }
@@ -229,7 +235,10 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
     //let mode_localization_dir = gpaths.mod_localization.display().to_string();
 
     if handle.get_is_mod_installed() {
-        helpers::uninstall_mod(&gpaths.mod_dir);
+        if let Err(e) = helpers::uninstall_mod(&gpaths.mod_dir) {
+            handle.set_status_text(format!("Error: {}", e).into());
+            return;
+        }
     }
 
     // Attempt to write the seed to a file in the rand_hero mod directory.
@@ -255,16 +264,17 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
     }
 
     if handle.get_rand_combat_skills() {
-        // Attempt to create the nessesary directory and exit if this fails as it is required.
+        // Attempt to create the necessary directory and return if this fails as it is required.
         match fs::create_dir_all(&gpaths.mod_heroes) {
             Ok(_) => debug!("Created directory: {}", &gpaths.mod_heroes.display()),
             Err(e) => {
                 error!(
                     "Could not create directory: {}\nReason: {}",
-                    &gpaths.mod_dungeon.display(),
+                    &gpaths.mod_heroes.display(),
                     e
                 );
-                std::process::exit(1);
+                handle.set_status_text(format!("Error: Could not create directory: {}", e).into());
+                return;
             }
         }
 
@@ -295,7 +305,8 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
                                 &localization_xml_path.to_str().unwrap(),
                                 e
                             );
-                            std::process::exit(1);
+                            handle.set_status_text(format!("Error: Unable to write localization file: {}", e).into());
+                            return;
                         } else {
                             info!(
                                 "{} written to \'{}\'",
@@ -305,9 +316,9 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
                         }
                     }
                     Err(e) => {
-                        // exit if the localization xml cannot be rendered as it is required by the game
                         error!("Unable to render localization data\nReason: {}", e);
-                        std::process::exit(1);
+                        handle.set_status_text(format!("Error: Unable to render localization data: {}", e).into());
+                        return;
                     }
                 }
             }
@@ -316,13 +327,14 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
                     "Unable to read default string table to build localization\nReason: {}",
                     e
                 );
-                std::process::exit(1);
+                handle.set_status_text(format!("Error: Unable to read localization data: {}", e).into());
+                return;
             }
         }
     }
 
     if handle.get_rand_boss() || handle.get_rand_monster() {
-        // Attempt to create the nessesary directory and exit if this fails as it is required.
+        // Attempt to create the necessary directory and return if this fails as it is required.
         match fs::create_dir_all(&gpaths.mod_dungeon) {
             Ok(_) => debug!("Created directory: {}", &gpaths.mod_dungeon.display()),
             Err(e) => {
@@ -331,7 +343,8 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
                     &gpaths.mod_dungeon.display(),
                     e
                 );
-                std::process::exit(1);
+                handle.set_status_text(format!("Error: Could not create directory: {}", e).into());
+                return;
             }
         }
         if let Ok(files) = rand_mash::get_data_files(&gpaths.base_dungeon, &None)
@@ -395,18 +408,20 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
                     &project_xml_path.to_str().unwrap(),
                     e
                 );
-                std::process::exit(1);
+                handle.set_status_text(format!("Error: Unable to write project.xml: {}", e).into());
+                return;
             } else {
                 info!("project.xml written to '{}'", &project_xml_path.display());
             }
         }
         Err(e) => {
-            // exit if the project.xml cannot be rendered as it is required by the game
-            // without it the mod will fail to be recognized and loaded
             error!("Unable to render project data\nReason: {}", e);
-            std::process::exit(1);
+            handle.set_status_text(format!("Error: Unable to render project data: {}", e).into());
+            return;
         }
     }
 
-    helpers::run_workshop_tool(&PathBuf::from(game_dir), &PathBuf::from(mod_dir));
+    if let Err(e) = helpers::run_workshop_tool(&PathBuf::from(game_dir), &PathBuf::from(mod_dir)) {
+        handle.set_status_text(format!("Error: {}", e).into());
+    }
 }

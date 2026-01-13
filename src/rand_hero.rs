@@ -73,13 +73,13 @@ pub fn get_data_files(
                             }
                         }
                         Err(e) => {
-                            error!("Could not read data\nReason: {}", e);
+                            warn!("Could not read data\nReason: {}", e);
                         }
                     }
                 }
             }
             Err(e) => {
-                error!(
+                warn!(
                     "Unable to access directory {}\nReason: {}",
                     &hdir.to_string_lossy(),
                     e

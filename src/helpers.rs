@@ -6,7 +6,7 @@ use std::error::Error;
 use std::{
     fs,
     path::{Path, PathBuf},
-    process::{Command, Stdio, exit},
+    process::{Command, Stdio},
     thread,
 };
 
@@ -57,14 +57,14 @@ pub fn get_data_dirs(install_dir: &Path) -> Result<GamePath, Box<dyn Error>> {
                     }
                     // TODO: add addition error details
                     Err(e) => {
-                        error!("{}", e);
+                        warn!("{}", e);
                     }
                 }
             }
         }
         // TODO: add addition error details
         Err(e) => {
-            error!("{}", e);
+            warn!("{}", e);
         }
     }
 
@@ -115,14 +115,14 @@ pub fn get_data_dirs(install_dir: &Path) -> Result<GamePath, Box<dyn Error>> {
                         }
                         Err(e) => {
                             // TODO: add addition error details
-                            error!("{}", e);
+                            warn!("{}", e);
                         }
                     }
                 }
             }
             Err(e) => {
                 // TODO: add addition error details
-                error!("{}", e);
+                warn!("{}", e);
             }
         }
     }
@@ -154,13 +154,13 @@ pub fn install_mod(mod_dir: &Path, mod_locale_path: &Path) {
     for dir in [mod_dir, mod_locale_path] {
         match fs::create_dir_all(dir) {
             Ok(_) => debug!("Created directory: {}", dir.display()),
-            Err(e) => error!("Could not create directory: {}\nReason: {}", dir.display(), e),
+            Err(e) => warn!("Could not create directory: {}\nReason: {}", dir.display(), e),
         }
     }
 }
 
 /// Uninstall existing randomizer mod
-pub fn uninstall_mod(mod_dir: &Path) {
+pub fn uninstall_mod(mod_dir: &Path) -> Result<(), String> {
     // to avoid issues remove any previous version of the randomizer mod
     // if unsuccessful after three attempts inform the user and exit to allow for manual cleanup
     let mut attempt = 1;
@@ -178,18 +178,18 @@ pub fn uninstall_mod(mod_dir: &Path) {
             match remove_dir_all(mod_dir) {
                 Ok(_) => {
                     info!("Previous randomizer mod successfully uninstalled");
-                    break;
+                    return Ok(());
                 }
                 Err(e) => {
-                    error!("Unable to uninstall existing randomizer\nReason {}", e);
+                    warn!("Unable to uninstall existing randomizer\nReason {}", e);
 
                     if attempt == retry_limit {
-                        error!(
+                        let msg = format!(
                             "Unable to remove mod directory at \"{}\"\nPlease remove it manually and retry",
                             &mod_dir.display()
                         );
-
-                        exit(1);
+                        error!("{}", msg);
+                        return Err(msg);
                     } else {
                         // pause to let any running operation finish and clean up before retrying
                         thread::sleep(std::time::Duration::from_millis(retry_delay));
@@ -199,6 +199,7 @@ pub fn uninstall_mod(mod_dir: &Path) {
             }
         }
     }
+    Ok(())
 }
 
 /// Render mod project.xml template
@@ -225,20 +226,22 @@ pub fn render_project_xml(install_path: &Path, mod_path: &Path) -> Result<String
             Ok(_) => {
                 info!("Successfully generated sample_project.xml");
             }
-            Err(_) => {
-                error!("Unable to generate required sample_project.xml automatically, exiting...");
-                std::process::exit(1);
+            Err(e) => {
+                let msg = "Unable to generate required sample_project.xml automatically";
+                error!("{}: {}", msg, e);
+                return Err(msg.into());
             }
         }
     }
 
     // read template content for later updating
     let base_xml_path = bin_dir.join("sample_project.xml");
-    let base_xml_content = match fs::read_to_string(base_xml_path) {
+    let base_xml_content = match fs::read_to_string(&base_xml_path) {
         Ok(content) => content,
-        Err(_) => {
-            error!("Missing sample_project.xml, cannot generate mod project.xml file");
-            exit(1);
+        Err(e) => {
+            let msg = format!("Missing sample_project.xml at {}: {}", base_xml_path.display(), e);
+            error!("{}", msg);
+            return Err(msg.into());
         }
     };
 
@@ -324,7 +327,7 @@ pub fn render_audio_json(data: String) -> String {
 }
 
 /// Convert and export localization strings to the proper game file
-pub fn run_workshop_tool(install_path: &Path, mod_path: &Path) {
+pub fn run_workshop_tool(install_path: &Path, mod_path: &Path) -> Result<(), String> {
     let bin_dir = install_path.join("_windows").join("win32");
     let workshop_upload_bin = bin_dir.join("steam_workshop_upload.exe");
 
@@ -361,12 +364,15 @@ pub fn run_workshop_tool(install_path: &Path, mod_path: &Path) {
                 info!("Successfully finalized mod data")
             }
             Err(e) => {
-                error!("Unable to finalize mod data\nReason: {}", e);
-                exit(1);
+                let msg = format!("Unable to finalize mod data: {}", e);
+                error!("{}", msg);
+                return Err(msg);
             }
         }
     } else {
-        error!("steam_workshop_upload.exe is not present and is required, exiting...");
-        exit(1);
+        let msg = "steam_workshop_upload.exe is not present and is required".to_string();
+        error!("{}", msg);
+        return Err(msg);
     }
+    Ok(())
 }
