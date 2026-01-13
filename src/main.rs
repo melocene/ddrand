@@ -4,12 +4,7 @@
 
 slint::include_modules!();
 
-use chrono::Datelike;
 use clap::Parser;
-use log::*;
-use rand::{Rng, distr::Alphanumeric, rng, rngs::StdRng};
-use rand_pcg::Pcg64;
-use rand_seeder::Seeder;
 use rfd::FileDialog;
 use std::collections::HashMap;
 use std::{
@@ -17,6 +12,7 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
 };
+use tracing::{debug, error, info, warn};
 use tracing_subscriber::filter::LevelFilter;
 
 use crate::helpers::GamePath;
@@ -26,7 +22,14 @@ mod helpers;
 mod logger;
 mod rand_hero;
 mod rand_mash;
+mod seed;
 mod steam;
+
+// #[cfg(target_os = "windows")]
+// const STEAM_BIN: &str = "steam.exe";
+
+// #[cfg(not(target_os = "windows"))]
+// const STEAM_BIN: &str = "steam";
 
 fn main() -> Result<(), slint::PlatformError> {
     let app_window = AppWindow::new().unwrap();
@@ -191,9 +194,13 @@ fn enable_handler(handle: &AppWindow) {
     match helpers::get_data_dirs(&Path::new(&game_dir)) {
         Ok(game_paths) => {
             handle.set_status_text("Starting randomization, please wait.".into());
-            enable_mod(handle, &game_paths);
-            handle.set_is_mod_installed(true);
-            handle.set_status_text("ddrand mod installed successfully.".into());
+            let handle_weak = handle.as_weak();
+            slint::Timer::single_shot(std::time::Duration::from_millis(50), move || {
+                let handle = handle_weak.unwrap();
+                enable_mod(&handle, &game_paths);
+                handle.set_is_mod_installed(true);
+                handle.set_status_text("ddrand mod installed successfully.".into());
+            });
         }
         Err(e) => {
             warn!("Unable to assemble game paths: {}", e);
@@ -204,29 +211,16 @@ fn enable_handler(handle: &AppWindow) {
 
 /// Callback to generate a 32 character string to use as an input seed for the random number generator.
 fn generate_clicked() -> String {
-    rng()
-        .sample_iter(&Alphanumeric)
-        .map(char::from)
-        .take(32)
-        .collect::<String>()
+    let seed = seed::generate_seed();
+    debug!("Generated seed: {}", &seed);
+    seed
 }
 
 /// Callback to generate a 32 character string based on the year and week of the year.
 fn weekly_clicked() -> String {
-    let current_date = chrono::Local::now().date_naive();
-    let current_week = current_date.iso_week().week0();
-    debug!("Current week: {}", current_week);
-    let week_seed = format!("{}{}seedoftheweek", current_date.year(), current_week);
-    debug!("Weekly base seed: {}", &week_seed);
-    let week_rng: Pcg64 = Seeder::from(week_seed).into_rng();
-    let wseed = week_rng
-        .sample_iter(&Alphanumeric)
-        .map(char::from)
-        .take(32)
-        .collect::<String>();
-    debug!("Seed of week {}: {}", current_week, wseed);
-
-    wseed
+    let seed = seed::generate_weekly_seed();
+    debug!("Generated weekly seed: {}", &seed);
+    seed
 }
 
 fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
@@ -246,8 +240,7 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
     let seed_val = handle.get_seed_value().to_string();
     info!("Using seed: {}", &seed_val);
 
-    // create the new StdRng from the provided seed value
-    let seed_rng: StdRng = Seeder::from(&seed_val).into_rng();
+    let seed_rng = seed::create_rng(&seed_val);
 
     helpers::install_mod(&gpaths.mod_dir, &gpaths.mod_localization);
     let seed_file_path = Path::join(&gpaths.mod_dir, "seed.txt");

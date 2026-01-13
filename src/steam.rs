@@ -4,12 +4,6 @@ use tracing::debug;
 
 const DARKEST_DUNGEON_APP_ID: u32 = 262060;
 
-// #[cfg(target_os = "windows")]
-// const STEAM_BIN: &str = "steam.exe";
-
-// #[cfg(not(target_os = "windows"))]
-// const STEAM_BIN: &str = "steam";
-
 pub fn get_steam_dir_path() -> Result<PathBuf, Box<dyn std::error::Error>> {
     let steam_dir_path = SteamDir::locate()?.path().to_path_buf();
     debug!(
@@ -31,3 +25,7 @@ pub fn get_darkest_dungeon_install_path() -> Result<PathBuf, Box<dyn std::error:
     );
     Ok(install_path)
 }
+
+// #[cfg(test)]
+// This file does not require testing since it is a simple wrapper around the steamlocate library.
+// Refer to https://github.com/williamvenner/steamlocate-rs for library specific documentation and tests.
