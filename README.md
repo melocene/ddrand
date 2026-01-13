@@ -108,6 +108,15 @@ Undisclosed AI usage may result in code contirbutions being removed or the banni
 
 This project adheres to [Semantic Versioning](https://semver.org).
 
+What does this mean for you? If you are simply using `ddrand`, nothing. The most important thing to remember is any version number which starts with a zero, 
+for instance v0.3.1, usability and functionality changes may be added or removed at any time with or without notice. The application is still expected to be reasonably stable 
+for a given release despite being subject to change.
+
+For developers, the right most number is used for bugfixes or other minor code changes behind the scenes that do not directly affect users. The middle number 
+should be incremented when features are added or other user facing changes happen without changing application functionality. The left most number will be incremented for 
+large user facing changes such as UI changes or major change in functionality that users will directly interact with. Note that this does not make it a hard and fast rule, 
+but something to be mindful of when incrementing and releasing a new version.
+
 All notable changes to this project can be found in the [changelog](CHANGELOG.md).
 
 ## License
