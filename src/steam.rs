@@ -2,21 +2,10 @@ use std::path::PathBuf;
 use steamlocate::SteamDir;
 use tracing::debug;
 
-const DARKEST_DUNGEON_APP_ID: u32 = 262060;
-
-pub fn get_steam_dir_path() -> Result<PathBuf, Box<dyn std::error::Error>> {
-    let steam_dir_path = SteamDir::locate()?.path().to_path_buf();
-    debug!(
-        "Steam install directory discovered at: {}",
-        steam_dir_path.display()
-    );
-    Ok(steam_dir_path)
-}
-
-pub fn get_darkest_dungeon_install_path() -> Result<PathBuf, Box<dyn std::error::Error>> {
+pub fn get_darkest_dungeon_install_path(app_id: u32) -> Result<PathBuf, Box<dyn std::error::Error>> {
     let steam_dir = SteamDir::locate()?;
     let (app, library) = steam_dir
-        .find_app(DARKEST_DUNGEON_APP_ID)?
+        .find_app(app_id)?
         .ok_or("Darkest Dungeon not found in Steam library")?;
     let install_path = library.path().join("steamapps").join("common").join(&app.install_dir);
     debug!(

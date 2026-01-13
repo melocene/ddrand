@@ -25,6 +25,8 @@ mod rand_mash;
 mod seed;
 mod steam;
 
+const DARKEST_DUNGEON_APP_ID: u32 = 262060;
+
 // #[cfg(target_os = "windows")]
 // const STEAM_BIN: &str = "steam.exe";
 
@@ -64,7 +66,7 @@ fn main() -> Result<(), slint::PlatformError> {
     // Clicking the `...` will allow the user to choose some other directory if automatic detection
     // fails or is incorrect.
     // Do not allow user to directly input strings for safety.
-    let install_path = match steam::get_darkest_dungeon_install_path() {
+    let install_path = match steam::get_darkest_dungeon_install_path(DARKEST_DUNGEON_APP_ID) {
         Ok(path_result) => {
             // Canonicalize to normalize path format on Windows
             let normalized = dunce::canonicalize(&path_result).unwrap_or(path_result);
@@ -186,7 +188,23 @@ fn main() -> Result<(), slint::PlatformError> {
         }
     });
 
+    let ui_handle = app_window.as_weak();
+    app_window.on_launch_game(move || {
+        let handle = ui_handle.unwrap();
+        handle.set_status_text("Launching game via Steam, please wait...".into());
+        info!("Launching game via Steam...");
+        launch_game();
+    });
+
     app_window.run()
+}
+
+fn launch_game() {
+    // Use the Steam protocol to launch the game via Steam using the user's specified settings if any.
+    // This avoids the nees to call the Steam client directly or add complex parsing logic to find the correct binary to run.
+    let launch_cmd = format!("steam://rungameid/{}", DARKEST_DUNGEON_APP_ID);
+    debug!("Launch command: {}", launch_cmd);
+    open::that(launch_cmd).unwrap();
 }
 
 fn enable_handler(handle: &AppWindow) {
