@@ -27,7 +27,11 @@ pub fn get_data_dirs(install_dir: &Path) -> Result<GamePath, Box<dyn Error>> {
     // Early validation: check if install_dir is valid before attempting directory reads
     //let install_path = Path::new(install_dir);
     if !install_dir.exists() || !install_dir.is_dir() {
-        return Err(format!("Invalid or missing install directory: '{}'", install_dir.display()).into());
+        return Err(format!(
+            "Invalid or missing install directory: '{}'",
+            install_dir.display()
+        )
+        .into());
     }
 
     let valid_dungeon_names: &[String] = &[
@@ -154,7 +158,11 @@ pub fn install_mod(mod_dir: &Path, mod_locale_path: &Path) {
     for dir in [mod_dir, mod_locale_path] {
         match fs::create_dir_all(dir) {
             Ok(_) => debug!("Created directory: {}", dir.display()),
-            Err(e) => warn!("Could not create directory: {}\nReason: {}", dir.display(), e),
+            Err(e) => warn!(
+                "Could not create directory: {}\nReason: {}",
+                dir.display(),
+                e
+            ),
         }
     }
 }
@@ -239,7 +247,11 @@ pub fn render_project_xml(install_path: &Path, mod_path: &Path) -> Result<String
     let base_xml_content = match fs::read_to_string(&base_xml_path) {
         Ok(content) => content,
         Err(e) => {
-            let msg = format!("Missing sample_project.xml at {}: {}", base_xml_path.display(), e);
+            let msg = format!(
+                "Missing sample_project.xml at {}: {}",
+                base_xml_path.display(),
+                e
+            );
             error!("{}", msg);
             return Err(msg.into());
         }

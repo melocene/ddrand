@@ -93,7 +93,7 @@ fn main() -> Result<(), slint::PlatformError> {
     // Used for initial UI setup; paths are regenerated when Enable is clicked.
     match helpers::get_data_dirs(&install_path) {
         Ok(paths) => {
-            info!("Mod directory will be:\'{}\'", paths.mod_dir.display());
+            info!("Mod directory will be: \'{}\'", paths.mod_dir.display());
             app_window.set_mod_dir(paths.mod_dir.display().to_string().into());
             // If the mod directory exist, assume the mod is installed and enable disable button.
             if paths.mod_dir.exists() && paths.mod_dir.is_dir() {
@@ -257,9 +257,7 @@ fn generate_clicked() -> String {
 
 /// Callback to generate a 32 character string based on the year and week of the year.
 fn weekly_clicked() -> String {
-    let seed = seed::generate_weekly_seed();
-    debug!("Generated weekly seed: {}", &seed);
-    seed
+    seed::generate_weekly_seed()
 }
 
 fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
