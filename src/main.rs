@@ -26,6 +26,7 @@ mod helpers;
 mod logger;
 mod rand_hero;
 mod rand_mash;
+mod steam;
 
 fn main() -> Result<(), slint::PlatformError> {
     let app_window = AppWindow::new().unwrap();
@@ -46,7 +47,8 @@ fn main() -> Result<(), slint::PlatformError> {
     let log_date = chrono::Local::now().format("%Y%m%d").to_string();
     let log_filename = format!("{}_{}.log", env!("CARGO_BIN_NAME"), log_date);
     // If compiled in `debug` mode or if provided the default flag print debug information to the log file.
-    let _ = logger::init(
+    // The guard must be kept alive to ensure logs are flushed on exit.
+    let _log_guard = logger::init(
         if opts.debug || cfg!(debug_assertions) {
             LevelFilter::DEBUG
         } else {
@@ -56,35 +58,29 @@ fn main() -> Result<(), slint::PlatformError> {
     );
     debug!("Debug mode enabled.");
 
-    // Attempt to load the seed from the Windows registry otherwise return a default.
     // Clicking the `...` will allow the user to choose some other directory if automatic detection
     // fails or is incorrect.
     // Do not allow user to directly input strings for safety.
-    let install_path = match helpers::get_install_path() {
+    let install_path = match steam::get_darkest_dungeon_install_path() {
         Ok(path_result) => {
-            info!("Autodetected installation path: \'{}\'", &path_result);
-            path_result
+            // Canonicalize to normalize path format on Windows
+            let normalized = dunce::canonicalize(&path_result).unwrap_or(path_result);
+            info!("Autodetected game installation path: \'{}\'", &normalized.display());
+            normalized
         }
         Err(e) => {
             error!("Autodetection failed for game installation.\nReason: {}", e);
-            String::new()
+            PathBuf::new()
         }
     };
-    let tmp_ipath = Path::new(&install_path);
-    if !tmp_ipath.exists() || !tmp_ipath.is_dir() {
+    if !install_path.exists() || !install_path.is_dir() {
         warn!(
             "Installation path does not exist or is not a directory. Please use '...' button to select installation directory."
         );
-        // Set empty game directory in UI
-        let window = app_window.as_weak().unwrap();
-        window.set_game_dir("AUTODETECT_FAILED".into());
-        window.set_status_text("Autodetection failed for game installation.".into());
+        app_window.set_game_dir("AUTODETECT_FAILED".into());
+        app_window.set_status_text("Autodetection failed for game installation.".into());
     } else {
-        // Set detected game directory in UI
-        app_window
-            .as_weak()
-            .unwrap()
-            .set_game_dir(install_path.clone().into());
+        app_window.set_game_dir(install_path.display().to_string().into());
     }
 
     // Return a dictionary of paths for the various game and mod data directories.
@@ -119,12 +115,12 @@ fn main() -> Result<(), slint::PlatformError> {
     // If the user cancels the open file dialog a `None` result is returned which is invalid.
     // In these cases rather than crash store and reuse the last selected directory.
     // When a new valid directory is selected the mod directory will be assembled from it.
-    let mut previous_game_dir = install_path;
+    let mut previous_game_dir = install_path.clone();
     let ui_handle = app_window.as_weak();
     app_window.on_select_dir(move || {
         let game_dir = match FileDialog::new().pick_folder() {
             Some(selected_dir) => {
-                previous_game_dir = selected_dir.display().to_string();
+                previous_game_dir = selected_dir.to_path_buf();
                 selected_dir
             }
             None => PathBuf::from(previous_game_dir.clone()),
@@ -186,7 +182,7 @@ fn main() -> Result<(), slint::PlatformError> {
 
 fn enable_handler(handle: &AppWindow) {
     let game_dir = handle.get_game_dir().to_string();
-    match helpers::get_data_dirs(&game_dir) {
+    match helpers::get_data_dirs(&Path::new(&game_dir)) {
         Ok(game_paths) => {
             handle.set_status_text("Starting randomization, please wait.".into());
             enable_mod(handle, &game_paths);
@@ -230,7 +226,7 @@ fn weekly_clicked() -> String {
 fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
     let game_dir = gpaths.base.display().to_string();
     let mod_dir = gpaths.mod_dir.display().to_string();
-    let mode_localization_dir = gpaths.mod_localization.display().to_string();
+    //let mode_localization_dir = gpaths.mod_localization.display().to_string();
 
     if handle.get_is_mod_installed() {
         helpers::uninstall_mod(&gpaths.mod_dir);
@@ -244,7 +240,7 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
     // create the new StdRng from the provided seed value
     let seed_rng: StdRng = Seeder::from(&seed_val).into_rng();
 
-    helpers::install_mod(&mod_dir, &mode_localization_dir);
+    helpers::install_mod(&gpaths.mod_dir, &gpaths.mod_localization);
     let seed_file_path = Path::join(&gpaths.mod_dir, "seed.txt");
     if let Err(e) = fs::File::create(&seed_file_path)
         .and_then(|mut seed_file| seed_file.write_all(seed_val.as_bytes()))
