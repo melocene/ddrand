@@ -2,8 +2,6 @@ import { Button, CheckBox, GroupBox, HorizontalBox, LineEdit, VerticalBox, Stand
 
 export component AppWindow inherits Window {
     title: app-window-title;
-    height: 450px;
-    width: 512px;
     default-font-size: 14px;
     callback select-dir();
     callback generate-clicked();
@@ -12,6 +10,7 @@ export component AppWindow inherits Window {
     callback enable-clicked-confirmed();
     callback disable-clicked();
     callback disable-clicked-confirmed();
+    callback launch-game();
     in-out property <string> app_window_title;
     in-out property <bool> is-mod-installed;
     in-out property <bool> show-overwrite;
@@ -115,14 +114,12 @@ export component AppWindow inherits Window {
             }
 
             HorizontalBox {
-                // Currently disabled due to duplicate spawns when used with monster randomization.
-                // CheckBox {
-                //     text: "Bosses";
-                //     enabled: false;
-                //     toggled => {
-                //         root.rand-boss = self.checked;
-                //     }
-                // }
+                CheckBox {
+                    text: "Bosses";
+                    toggled => {
+                        root.rand-boss = self.checked;
+                    }
+                }
 
                 CheckBox {
                     text: "Combat Skills";
@@ -161,9 +158,21 @@ export component AppWindow inherits Window {
             Button {
                 text: "Disable";
                 height: 32px;
+                primary: true;
                 enabled: is-mod-installed;
                 clicked => {
                     popup-disable.show();
+                }
+            }
+        }
+
+        HorizontalBox {
+            Button {
+                text: "Launch Game";
+                height: 32px;
+                primary: true;
+                clicked => {
+                    root.launch-game();
                 }
             }
         }
@@ -186,41 +195,41 @@ export component AppWindow inherits Window {
     // Confirmation popup for mod removal.
     popup-disable := PopupWindow {
         close-policy: close-on-click;
-        height: root.height / 4;
-        width: root.width / 4;
-        x: root.width / 3;
-        y: root.height / 3;
+        width: 280px;
+        height: 100px;
+        x: (root.width - self.width) / 2;
+        y: (root.height - self.height) / 2;
+
         Rectangle {
-            height: root.height / 3;
-            width: root.width / 2;
+            width: 100%;
+            height: 100%;
             background: root.background;
             border-color: Colors.grey;
             border-radius: 8px;
             border-width: 4px;
-        }
 
-        VerticalBox {
-            Text {
-                text: "Confirm mod uninstallation?";
-                height: 24px;
-                font-weight: 640;
-                vertical-alignment: center;
-                horizontal-alignment: center;
-            }
-
-            HorizontalBox {
-                StandardButton {
-                    kind: yes;
-                    clicked => {
-                        root.disable-clicked-confirmed();
-                        popup-disable.close();
-                    }
+            VerticalBox {
+                Text {
+                    text: "Confirm mod uninstallation?";
+                    font-weight: 640;
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
                 }
 
-                StandardButton {
-                    kind: no;
-                    clicked => {
-                        popup-disable.close();
+                HorizontalBox {
+                    StandardButton {
+                        kind: yes;
+                        clicked => {
+                            root.disable-clicked-confirmed();
+                            popup-disable.close();
+                        }
+                    }
+
+                    StandardButton {
+                        kind: no;
+                        clicked => {
+                            popup-disable.close();
+                        }
                     }
                 }
             }
@@ -230,41 +239,41 @@ export component AppWindow inherits Window {
     // Confirmation for overwriting the mod if enabling when already present.
     popup-overwrite := PopupWindow {
         close-policy: close-on-click;
-        height: root.height / 4;
-        width: root.width / 4;
-        x: root.width / 3;
-        y: root.height / 3;
+        width: 250px;
+        height: 100px;
+        x: (root.width - self.width) / 2;
+        y: (root.height - self.height) / 2;
+
         Rectangle {
-            height: root.height / 3;
-            width: root.width / 2;
+            width: 100%;
+            height: 100%;
             background: root.background;
             border-color: Colors.grey;
             border-radius: 8px;
             border-width: 4px;
-        }
 
-        VerticalBox {
-            Text {
-                text: "Confirm mod overwrite?";
-                height: 24px;
-                font-weight: 640;
-                vertical-alignment: center;
-                horizontal-alignment: center;
-            }
-
-            HorizontalBox {
-                StandardButton {
-                    kind: yes;
-                    clicked => {
-                        root.enable-clicked-confirmed();
-                        popup-overwrite.close();
-                    }
+            VerticalBox {
+                Text {
+                    text: "Confirm mod overwrite?";
+                    font-weight: 640;
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
                 }
 
-                StandardButton {
-                    kind: no;
-                    clicked => {
-                        popup-overwrite.close();
+                HorizontalBox {
+                    StandardButton {
+                        kind: yes;
+                        clicked => {
+                            root.enable-clicked-confirmed();
+                            popup-overwrite.close();
+                        }
+                    }
+
+                    StandardButton {
+                        kind: no;
+                        clicked => {
+                            popup-overwrite.close();
+                        }
                     }
                 }
             }
