@@ -27,27 +27,21 @@ mod steam;
 
 const DARKEST_DUNGEON_APP_ID: u32 = 262060;
 
-// #[cfg(target_os = "windows")]
-// const STEAM_BIN: &str = "steam.exe";
-
-// #[cfg(not(target_os = "windows"))]
-// const STEAM_BIN: &str = "steam";
-
 fn main() -> Result<(), slint::PlatformError> {
     let bin_version = if cfg!(debug_assertions) {
         format!("{} DEVELOPMENT BUILD", env!("CARGO_BIN_NAME"))
     } else {
         format!("{} v{}", env!("CARGO_BIN_NAME"), env!("CARGO_PKG_VERSION"))
     };
-    
-    let app_window = AppWindow::new().unwrap();
+
     let opts = cli::Opts::parse();
 
     if opts.version {
-        println!("{}",bin_version);
+        println!("{}", bin_version);
         std::process::exit(0);
     }
 
+    let app_window = AppWindow::new().unwrap();
     app_window.set_app_window_title(bin_version.into());
     app_window.set_status_text("Application started.".into());
 
@@ -74,7 +68,10 @@ fn main() -> Result<(), slint::PlatformError> {
         Ok(path_result) => {
             // Canonicalize to normalize path format on Windows
             let normalized = dunce::canonicalize(&path_result).unwrap_or(path_result);
-            info!("Autodetected game installation path: \'{}\'", &normalized.display());
+            info!(
+                "Autodetected game installation path: \'{}\'",
+                &normalized.display()
+            );
             normalized
         }
         Err(e) => {
@@ -197,18 +194,38 @@ fn main() -> Result<(), slint::PlatformError> {
         let handle = ui_handle.unwrap();
         handle.set_status_text("Launching game via Steam, please wait...".into());
         info!("Launching game via Steam...");
-        launch_game();
+        match launch_game() {
+            Ok(_) => {
+                handle.set_status_text("Game launched successfully.".into());
+            }
+            Err(_) => {
+                handle.set_status_text("Unable to launch game, see the log for details.".into());
+            }
+        }
     });
 
     app_window.run()
 }
 
-fn launch_game() {
+fn launch_game() -> Result<(), std::io::Error> {
     // Use the Steam protocol to launch the game via Steam using the user's specified settings if any.
     // This avoids the nees to call the Steam client directly or add complex parsing logic to find the correct binary to run.
+    //
+    // Be aware: the `open` crate does not provide a way to wait for the game to launch or check if it is running.
+    // This is a limitation of the crate and not the Steam protocol.
+    // The crate is also fragile on non-Windows systems and may not work as expected. This is inherited from the platform and is not an issue with the crate.
     let launch_cmd = format!("steam://rungameid/{}", DARKEST_DUNGEON_APP_ID);
     debug!("Launch command: {}", launch_cmd);
-    open::that(launch_cmd).unwrap();
+    match open::that_detached(launch_cmd) {
+        Ok(_) => {
+            info!("Game launched via Steam");
+            Ok(())
+        }
+        Err(e) => {
+            warn!("Unable to launch game via Steam: {}", e);
+            Err(e)
+        }
+    }
 }
 
 fn enable_handler(handle: &AppWindow) {
@@ -251,10 +268,11 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
     //let mode_localization_dir = gpaths.mod_localization.display().to_string();
 
     if handle.get_is_mod_installed()
-        && let Err(e) = helpers::uninstall_mod(&gpaths.mod_dir) {
-            handle.set_status_text(format!("Error: {}", e).into());
-            return;
-        }
+        && let Err(e) = helpers::uninstall_mod(&gpaths.mod_dir)
+    {
+        handle.set_status_text(format!("Error: {}", e).into());
+        return;
+    }
 
     // Attempt to write the seed to a file in the rand_hero mod directory.
     // If this fails just warn and continue as it is not required and is already displayed in the GUI.
@@ -319,7 +337,9 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
                                 &localization_xml_path.to_str().unwrap(),
                                 e
                             );
-                            handle.set_status_text(format!("Error: Unable to write localization file: {}", e).into());
+                            handle.set_status_text(
+                                format!("Error: Unable to write localization file: {}", e).into(),
+                            );
                             return;
                         } else {
                             info!(
@@ -331,7 +351,9 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
                     }
                     Err(e) => {
                         error!("Unable to render localization data\nReason: {}", e);
-                        handle.set_status_text(format!("Error: Unable to render localization data: {}", e).into());
+                        handle.set_status_text(
+                            format!("Error: Unable to render localization data: {}", e).into(),
+                        );
                         return;
                     }
                 }
@@ -341,7 +363,9 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
                     "Unable to read default string table to build localization\nReason: {}",
                     e
                 );
-                handle.set_status_text(format!("Error: Unable to read localization data: {}", e).into());
+                handle.set_status_text(
+                    format!("Error: Unable to read localization data: {}", e).into(),
+                );
                 return;
             }
         }
