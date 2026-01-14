@@ -1,22 +1,31 @@
-import { Button, CheckBox, GroupBox, HorizontalBox, LineEdit, VerticalBox, StandardButton , ScrollView} from "std-widgets.slint";
+import {
+    Button,
+    CheckBox,
+    GroupBox,
+    HorizontalBox,
+    LineEdit,
+    ScrollView,
+    StandardButton,
+    VerticalBox,
+} from "std-widgets.slint";
 
 export component AppWindow inherits Window {
     title: app-window-title;
     default-font-size: 14px;
-    callback select-dir();
-    callback generate-clicked();
-    callback weekly-clicked();
-    callback enable-clicked();
-    callback enable-clicked-confirmed();
     callback disable-clicked();
     callback disable-clicked-confirmed();
+    callback enable-clicked();
+    callback enable-clicked-confirmed();
+    callback generate-clicked();
     callback launch-game();
-    in-out property <string> app_window_title;
+    callback select-dir();
+    callback weekly-clicked();
     in-out property <bool> is-mod-installed;
-    in-out property <bool> show-overwrite;
     in-out property <bool> rand-boss;
     in-out property <bool> rand-combat-skills;
     in-out property <bool> rand-monster;
+    in-out property <bool> show-overwrite;
+    in-out property <string> app_window_title;
     in-out property <string> game-dir;
     in-out property <string> mod-dir;
     in-out property <string> seed-value;
@@ -114,12 +123,12 @@ export component AppWindow inherits Window {
             }
 
             HorizontalBox {
-                CheckBox {
-                    text: "Bosses";
-                    toggled => {
-                        root.rand-boss = self.checked;
-                    }
-                }
+                // CheckBox {
+                //     text: "Bosses";
+                //     toggled => {
+                //         root.rand-boss = self.checked;
+                //     }
+                // }
 
                 CheckBox {
                     text: "Combat Skills";
