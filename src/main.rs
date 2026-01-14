@@ -265,9 +265,8 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
     let mod_dir = gpaths.mod_dir.display().to_string();
     //let mode_localization_dir = gpaths.mod_localization.display().to_string();
 
-    if handle.get_is_mod_installed()
-        && let Err(e) = helpers::uninstall_mod(&gpaths.mod_dir)
-    {
+    // Use filesystem state as source of truth, not GUI state
+    if let Err(e) = helpers::uninstall_mod(&gpaths.mod_dir) {
         handle.set_status_text(format!("Error: {}", e).into());
         return;
     }
@@ -409,8 +408,9 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
         if let Ok(json_out) = helpers::extract_audio_json(&gpaths.base) {
             let output = helpers::render_audio_json(json_out);
             match fs::OpenOptions::new()
-                .append(true)
+                .write(true)
                 .create(true)
+                .truncate(true)
                 .open(mod_audio_file)
             {
                 Ok(mut outfile) => {

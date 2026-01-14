@@ -221,8 +221,9 @@ pub fn randomize(
         let hpath = Path::join(&hdir, Path::new(&format!("{}.info.darkest", &hero.name)));
         fs::create_dir_all(hdir).unwrap();
         let mut of = OpenOptions::new()
-            .append(true)
+            .write(true)
             .create(true)
+            .truncate(true)
             .open(hpath)
             .unwrap();
 
