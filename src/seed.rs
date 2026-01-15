@@ -1,8 +1,8 @@
 use chrono::Datelike;
+use log::debug;
 use rand::{Rng, distr::Alphanumeric, rng, rngs::StdRng};
 use rand_pcg::Pcg64;
 use rand_seeder::Seeder;
-use tracing::debug;
 
 pub fn create_rng(seed: &str) -> StdRng {
     Seeder::from(seed).into_rng()

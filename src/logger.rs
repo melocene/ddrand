@@ -1,43 +1,34 @@
-use std::fs::OpenOptions;
-use tracing_appender::non_blocking;
-use tracing_appender::non_blocking::WorkerGuard;
-use tracing_subscriber::{filter::LevelFilter, fmt::time::ChronoLocal, prelude::*};
+use chrono::Local;
+use flexi_logger::{FileSpec, Logger, WriteMode};
+use log::*;
 
-/// Initialize the logger. Returns a guard that must be kept alive for the
-/// duration of the program to ensure logs are flushed properly.
-pub fn init(
-    level: LevelFilter,
-    log_file: Option<&str>,
-) -> Result<Option<WorkerGuard>, Box<dyn std::error::Error>> {
-    let mut layers = vec![];
-    let mut guard = None;
+pub fn init(log_level: &str, log_filename: &str) {
+    Logger::try_with_env_or_str(log_level)
+        .unwrap()
+        .format(format)
+        .log_to_file(
+            FileSpec::default()
+                .directory(".")
+                .basename(log_filename)
+                .suffix("log"),
+        )
+        .write_mode(WriteMode::Async)
+        .append()
+        .duplicate_to_stderr(flexi_logger::Duplicate::All) // Add this
+        .start()
+        .unwrap();
+}
 
-    // Ignore file writing if a filename was not provided for the log.
-    // Even with a valid filename, logging to a file is considered not required so will get ignored on write errors.
-    if let Some(fname) = log_file {
-        match OpenOptions::new().append(true).create(true).open(fname) {
-            Ok(log_file_handle) => {
-                let (non_blocking_writer, worker_guard) = non_blocking(log_file_handle);
-                guard = Some(worker_guard);
-
-                let log_file = tracing_subscriber::fmt::layer()
-                    .with_ansi(false)
-                    .with_timer(ChronoLocal::new("%Y-%m-%d %H:%M:%S".to_string()))
-                    .with_target(false)
-                    .with_writer(non_blocking_writer)
-                    .compact()
-                    .with_filter(level)
-                    .boxed();
-                layers.push(log_file);
-            }
-            Err(e) => {
-                eprintln!("ERROR: Could not write log file, will only log to stdout");
-                eprintln!("{}", e);
-            }
-        }
-    }
-
-    tracing_subscriber::registry().with(layers).init();
-
-    Ok(guard)
+fn format(
+    w: &mut dyn std::io::Write,
+    _now: &mut flexi_logger::DeferredNow,
+    record: &Record,
+) -> Result<(), std::io::Error> {
+    write!(
+        w,
+        "{} [{:5}] {}",
+        Local::now().format("%Y-%m-%d %H:%M:%S"),
+        record.level(),
+        record.args()
+    )
 }

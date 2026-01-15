@@ -5,6 +5,7 @@
 slint::include_modules!();
 
 use clap::Parser;
+use log::*;
 use rfd::FileDialog;
 use std::collections::HashMap;
 use std::{
@@ -12,8 +13,6 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
 };
-use tracing::{debug, error, info, warn};
-use tracing_subscriber::filter::LevelFilter;
 
 use crate::helpers::GamePath;
 
@@ -53,11 +52,11 @@ fn main() -> Result<(), slint::PlatformError> {
     // The guard must be kept alive to ensure logs are flushed on exit.
     let _log_guard = logger::init(
         if opts.debug || cfg!(debug_assertions) {
-            LevelFilter::DEBUG
+            "debug"
         } else {
-            LevelFilter::INFO
+            "info"
         },
-        Some(&log_filename),
+        &log_filename,
     );
     debug!("Debug mode enabled.");
 

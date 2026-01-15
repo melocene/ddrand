@@ -23,9 +23,10 @@ strip = true
 codegen-units = 1
 
 [dependencies]
-chrono = { version = "0.4.42", default-features = false, features = ["std", "clock", "alloc"] }
+chrono = { version = "0.4.43", default-features = false, features = ["std", "clock", "alloc"] }
 clap = { version = "4.5.54", default-features = false, features = ["derive", "error-context", "help", "std", "usage"] }
 dunce = "1.0.5"
+flexi_logger = { version = "0.31.7", features = ["async", "buffer_writer"], default-features = false }
 indexmap = "2.13.0"
 log = "0.4.29"
 open = { version = "5.3.3", features = ["shellexecute-on-windows"] }
@@ -38,9 +39,6 @@ rfd = { version = "0.17.2", default-features = false, features = ["common-contro
 serde = { version = "1.0.228", features = ["derive"] }
 slint = { version = "1.14.1", default-features = false, features = ["accessibility", "backend-winit", "compat-1-2", "renderer-winit-software", "std"] }
 steamlocate = "2.0.1"
-tracing = "0.1.44"
-tracing-appender = { version = "0.2.4", features = ["parking_lot"] }
-tracing-subscriber = { version = "0.3.22", default-features = false, features = ["chrono", "fmt", "std", "registry"] }
 
 [build-dependencies]
 slint-build = "1.14.1"
