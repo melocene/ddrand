@@ -193,25 +193,29 @@ pub fn randomize(
     for mash in mashes {
         let data: Vec<String> = match (rand_boss, rand_mash) {
             // Both randomized: only named + stall (boss, hall, room added later)
-            (true, true) => mash.named
+            (true, true) => mash
+                .named
                 .into_iter()
                 .chain(mash.stall.into_iter())
                 .collect(),
             // Only boss randomized: include hall + room as-is
-            (true, false) => mash.named
+            (true, false) => mash
+                .named
                 .into_iter()
                 .chain(mash.stall.into_iter())
                 .chain(mash.hall.into_iter())
                 .chain(mash.room.into_iter())
                 .collect(),
             // Only monsters randomized: include boss as-is
-            (false, true) => mash.boss
+            (false, true) => mash
+                .boss
                 .into_iter()
                 .chain(mash.named.into_iter())
                 .chain(mash.stall.into_iter())
                 .collect(),
             // Neither (fallback, shouldn't happen)
-            (false, false) => mash.boss
+            (false, false) => mash
+                .boss
                 .into_iter()
                 .chain(mash.named.into_iter())
                 .chain(mash.stall.into_iter())

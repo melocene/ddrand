@@ -47,17 +47,16 @@ fn main() -> Result<(), slint::PlatformError> {
     // Setup the logger to use the application name and current date.
     // Log lines will append to the same days logs to avoid cluttering up the directory with small log files.
     let log_date = chrono::Local::now().format("%Y%m%d").to_string();
-    let log_filename = format!("{}_{}.log", env!("CARGO_BIN_NAME"), log_date);
+    let log_basename = format!("{}_{}", env!("CARGO_BIN_NAME"), log_date);
     // If compiled in `debug` mode or if provided the default flag print debug information to the log file.
     // The guard must be kept alive to ensure logs are flushed on exit.
-    let _log_guard = logger::init(
-        if opts.debug || cfg!(debug_assertions) {
-            "debug"
-        } else {
-            "info"
-        },
-        &log_filename,
-    );
+    let _log_handle = match logger::init(opts.debug || cfg!(debug_assertions), &log_basename) {
+        Ok(handle) => Some(handle),
+        Err(e) => {
+            eprintln!("ERROR: Failed to initialize logger: {}", e);
+            None
+        }
+    };
     debug!("Debug mode enabled.");
 
     // Clicking the `...` will allow the user to choose some other directory if automatic detection

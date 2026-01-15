@@ -1,22 +1,23 @@
 use chrono::Local;
-use flexi_logger::{FileSpec, Logger, WriteMode};
+use flexi_logger::{FileSpec, Logger, LoggerHandle, WriteMode};
 use log::*;
 
-pub fn init(log_level: &str, log_filename: &str) {
-    Logger::try_with_env_or_str(log_level)
-        .unwrap()
+pub fn init(
+    is_debug: bool,
+    log_basename: &str,
+) -> Result<LoggerHandle, flexi_logger::FlexiLoggerError> {
+    let handle = Logger::try_with_env_or_str(if is_debug { "debug" } else { "info" })?
         .format(format)
         .log_to_file(
             FileSpec::default()
                 .directory(".")
-                .basename(log_filename)
+                .basename(log_basename)
                 .suffix("log"),
         )
         .write_mode(WriteMode::Async)
         .append()
-        .duplicate_to_stderr(flexi_logger::Duplicate::All) // Add this
-        .start()
-        .unwrap();
+        .start()?;
+    Ok(handle)
 }
 
 fn format(
