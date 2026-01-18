@@ -186,6 +186,8 @@ pub fn uninstall_mod(mod_dir: &Path) -> Result<(), String> {
             match remove_dir_all(mod_dir) {
                 Ok(_) => {
                     info!("Previous randomizer mod successfully uninstalled");
+                    // brief pause to allow Windows filesystem to fully release the directory
+                    thread::sleep(std::time::Duration::from_millis(retry_delay));
                     return Ok(());
                 }
                 Err(e) => {
