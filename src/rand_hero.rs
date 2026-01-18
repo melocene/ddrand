@@ -51,7 +51,12 @@ pub fn get_data_files(
     excludes: &Option<Vec<String>>,
 ) -> Result<Vec<PathBuf>, Box<dyn Error>> {
     let mut datafiles: Vec<PathBuf> = Vec::new();
-    for hdir in hero_paths.values() {
+
+    // Sort hero paths by key for deterministic ordering (HashMap iteration is randomized)
+    let mut sorted_paths: Vec<_> = hero_paths.iter().collect();
+    sorted_paths.sort_by_key(|(k, _)| *k);
+
+    for (_, hdir) in sorted_paths {
         match fs::read_dir(hdir) {
             Ok(fread) => {
                 for item in fread {
@@ -87,6 +92,9 @@ pub fn get_data_files(
             }
         }
     }
+
+    // Sort final result for consistent ordering across filesystem implementations
+    datafiles.sort();
 
     Ok(datafiles)
 }
@@ -144,6 +152,12 @@ pub fn extract_data(datafiles: &[PathBuf]) -> Vec<Hero> {
             }
         }
 
+        hero.sknames.dedup();
+
+        if hero.sknames.len() != tmp_data.len() {
+            warn!("Skill count mismatch for skill names and data: {} != {}", hero.sknames.len(), tmp_data.len());
+        }
+
         // for each skill we read in create a new Skill object and assign it to the hero
         for (idx, skill_name) in tmp_data.keys().enumerate() {
             let skill = Skill {
@@ -153,7 +167,6 @@ pub fn extract_data(datafiles: &[PathBuf]) -> Vec<Hero> {
                 data: tmp_data.get(skill_name).unwrap().to_owned(),
             };
 
-            hero.sknames.dedup();
             hero.skills.push(skill);
         }
 
