@@ -12,7 +12,8 @@ pub fn init(
             FileSpec::default()
                 .directory(".")
                 .basename(log_basename)
-                .suffix("log"),
+                .suffix("log")
+                .suppress_timestamp(),
         )
         .write_mode(WriteMode::Async)
         .append()
