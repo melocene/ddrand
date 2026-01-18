@@ -14,6 +14,19 @@ use std::path::{Path, PathBuf};
 /// Translations for numeric positions to strings
 const POS_STR: &[&str] = &["one", "two", "three", "four", "five", "six", "seven"];
 
+/// Override mappings for heroes where icon order doesn't match file order.
+/// Returns None to use default file order, Some(pos) to override.
+/// Position 0 = "one", 1 = "two", etc.
+fn get_icon_position_override(hero: &str, skill: &str) -> Option<usize> {
+    match (hero, skill) {
+        // Vestal: first two skills have swapped icon positions
+        ("vestal", "mace_bash") => Some(1),
+        ("vestal", "judgement") => Some(0),
+        // Add other exceptions as discovered
+        _ => None,
+    }
+}
+
 /// Data read from the various hero class files
 #[derive(Debug, Clone)]
 pub struct Hero {
@@ -280,12 +293,17 @@ pub fn randomize(
 
             // copy skills icons for the randomized skills to the appropriate hero for in game alignment
             let sk_class = &hgroup[idx].class;
-            let sk_pos = hgroup[idx].pos;
+            // use override position if available for source skill, otherwise use file order
+            let sk_pos = get_icon_position_override(sk_class, &hgroup[idx].name)
+                .unwrap_or(hgroup[idx].pos);
             let from_fname = format!("{}.ability.{}.png", &sk_class, POS_STR[sk_pos]);
             let from_path = Path::join(base_hpaths.get(sk_class).unwrap(), Path::new(&from_fname));
+            // use override position if available for target skill slot, otherwise use file order
+            let target_pos = get_icon_position_override(&hero.name, hsname)
+                .unwrap_or(idx);
             let to_fname: PathBuf = vec![
                 Path::new(&hero.name),
-                Path::new(&format!("{}.ability.{}.png", &hero.name, POS_STR[idx])),
+                Path::new(&format!("{}.ability.{}.png", &hero.name, POS_STR[target_pos])),
             ]
             .into_iter()
             .collect();
