@@ -453,3 +453,28 @@ fn shuffle_skills(
 
     skill_groups
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_get_icon_position_override_override() {
+        assert_eq!(get_icon_position_override("vestal", "mace_bash"), Some(1));
+        assert_eq!(get_icon_position_override("vestal", "judgement"), Some(0));
+    }
+
+    #[test]
+    fn test_get_icon_position_override_no_override() {
+        assert_eq!(get_icon_position_override("hero", "skill"), None);
+        assert_eq!(get_icon_position_override("hero", "skill2"), None);
+
+    }
+
+    #[test]
+    fn test_get_icon_position_override_invalid_combination() {
+        assert_eq!(get_icon_position_override("hero1", "mace_bash"), None);
+        assert_eq!(get_icon_position_override("vestal", "nonexistent"), None);
+    }
+}
