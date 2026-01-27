@@ -19,8 +19,8 @@ use crate::helpers::GamePath;
 mod cli;
 mod helpers;
 mod logger;
+mod rand_enemy;
 mod rand_hero;
-mod rand_mash;
 mod seed;
 mod steam;
 
@@ -305,10 +305,10 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
             }
         }
 
-        let files = rand_hero::get_data_files(&gpaths.base_heroes, &None).unwrap();
-        let heroes = rand_hero::extract_data(&files);
+        let files = rand_hero::combat_skills::get_data_files(&gpaths.base_heroes, &None).unwrap();
+        let heroes = rand_hero::combat_skills::extract_data(&files);
 
-        let localization_map = rand_hero::randomize(
+        let localization_map = rand_hero::combat_skills::randomize(
             &gpaths.base_heroes,
             &gpaths.mod_heroes,
             heroes,
@@ -316,10 +316,11 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
         );
 
         info!("Extracting localization data");
-        match rand_hero::extract_localizations(&gpaths.base) {
+        match rand_hero::combat_skills::extract_localizations(&gpaths.base) {
             Ok(translation) => {
                 info!("Rendering new localization XML");
-                match rand_hero::render_localizations(translation, localization_map) {
+                match rand_hero::combat_skills::render_localizations(translation, localization_map)
+                {
                     Ok(rendered) => {
                         let localization_filename = "rand_hero_en.string_table.xml";
                         let localization_xml_path =
@@ -380,10 +381,10 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
                 return;
             }
         }
-        if let Ok(files) = rand_mash::get_data_files(&gpaths.base_dungeon, &None)
-            && let Ok(mashes) = rand_mash::extract_data(&files)
+        if let Ok(files) = rand_enemy::mash::get_data_files(&gpaths.base_dungeon, &None)
+            && let Ok(mashes) = rand_enemy::mash::extract_data(&files)
         {
-            rand_mash::randomize(
+            rand_enemy::mash::randomize(
                 &gpaths.mod_dungeon,
                 mashes,
                 seed_rng,

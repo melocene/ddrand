@@ -168,7 +168,11 @@ pub fn extract_data(datafiles: &[PathBuf]) -> Vec<Hero> {
         hero.sknames.dedup();
 
         if hero.sknames.len() != tmp_data.len() {
-            warn!("Skill count mismatch for skill names and data: {} != {}", hero.sknames.len(), tmp_data.len());
+            warn!(
+                "Skill count mismatch for skill names and data: {} != {}",
+                hero.sknames.len(),
+                tmp_data.len()
+            );
         }
 
         // for each skill we read in create a new Skill object and assign it to the hero
@@ -294,16 +298,18 @@ pub fn randomize(
             // copy skills icons for the randomized skills to the appropriate hero for in game alignment
             let sk_class = &hgroup[idx].class;
             // use override position if available for source skill, otherwise use file order
-            let sk_pos = get_icon_position_override(sk_class, &hgroup[idx].name)
-                .unwrap_or(hgroup[idx].pos);
+            let sk_pos =
+                get_icon_position_override(sk_class, &hgroup[idx].name).unwrap_or(hgroup[idx].pos);
             let from_fname = format!("{}.ability.{}.png", &sk_class, POS_STR[sk_pos]);
             let from_path = Path::join(base_hpaths.get(sk_class).unwrap(), Path::new(&from_fname));
             // use override position if available for target skill slot, otherwise use file order
-            let target_pos = get_icon_position_override(&hero.name, hsname)
-                .unwrap_or(idx);
+            let target_pos = get_icon_position_override(&hero.name, hsname).unwrap_or(idx);
             let to_fname: PathBuf = vec![
                 Path::new(&hero.name),
-                Path::new(&format!("{}.ability.{}.png", &hero.name, POS_STR[target_pos])),
+                Path::new(&format!(
+                    "{}.ability.{}.png",
+                    &hero.name, POS_STR[target_pos]
+                )),
             ]
             .into_iter()
             .collect();
@@ -454,11 +460,10 @@ fn shuffle_skills(
     skill_groups
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_get_icon_position_override_override() {
         assert_eq!(get_icon_position_override("vestal", "mace_bash"), Some(1));
@@ -469,7 +474,6 @@ mod tests {
     fn test_get_icon_position_override_no_override() {
         assert_eq!(get_icon_position_override("hero", "skill"), None);
         assert_eq!(get_icon_position_override("hero", "skill2"), None);
-
     }
 
     #[test]
