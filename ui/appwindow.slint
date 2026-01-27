@@ -22,6 +22,7 @@ export component AppWindow inherits Window {
     callback weekly-clicked();
     in-out property <bool> is-mod-installed;
     in-out property <bool> rand-boss;
+    in-out property <bool> rand-camping-skills;
     in-out property <bool> rand-combat-skills;
     in-out property <bool> rand-monster;
     in-out property <bool> show-overwrite;
@@ -123,12 +124,19 @@ export component AppWindow inherits Window {
             }
 
             HorizontalBox {
-                // CheckBox {
-                //     text: "Bosses";
-                //     toggled => {
-                //         root.rand-boss = self.checked;
-                //     }
-                // }
+                CheckBox {
+                    text: "Bosses";
+                    toggled => {
+                        root.rand-boss = self.checked;
+                    }
+                }
+
+                CheckBox {
+                    text: "Camping Skills";
+                    toggled => {
+                        root.rand-camping-skills = self.checked;
+                    }
+                }
 
                 CheckBox {
                     text: "Combat Skills";
