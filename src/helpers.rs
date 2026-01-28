@@ -1,6 +1,7 @@
 use log::*;
 use regex::Regex;
 use remove_dir_all::*;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::error::Error;
 use std::{
@@ -20,6 +21,11 @@ pub struct GamePath {
     pub mod_dungeon: PathBuf,
     pub mod_localization: PathBuf,
     pub mod_heroes: PathBuf,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct AudioLoadOrder {
+    pub load_order: Vec<String>,
 }
 
 /// Get all hero directories from the install path
@@ -309,35 +315,16 @@ pub fn render_project_xml(install_path: &Path, mod_path: &Path) -> Result<String
     Ok(rendered)
 }
 
-/// Read the default game audio load order JSON
-pub fn extract_audio_json(base_dir: &Path) -> Result<String, Box<dyn Error>> {
-    let base_audio_path = base_dir.join("audio");
-    let base_audio_file = base_audio_path.join("base.dungeon.load_order.json");
+/// Read the original audio load order and filter out entries which are not relevant to this mod
+pub fn get_filtered_audio_json(base_path: &Path) -> Result<String, Box<dyn Error>> {
+    let audio_json_path = base_path.join("audio").join("base.dungeon.load_order.json");
+    let mut audio_data: AudioLoadOrder =
+        serde_json::from_str(&fs::read_to_string(audio_json_path)?)?;
+    audio_data.load_order.retain(|entry| {
+        !entry.contains("props") && !entry.contains("darkestdungeon") && !entry.contains("town")
+    });
 
-    // input file is tiny, no harm reading in the whole thing at once
-    let content = fs::read_to_string(base_audio_file)?;
-
-    Ok(content)
-}
-
-/// Render the audio load order JSON for the mod, removing excess items
-pub fn render_audio_json(data: String) -> String {
-    let mut rendered = String::new();
-    for line in data.split_whitespace() {
-        // remove items not relevant to the dungeons supported by this mod
-        if !line.contains("props") && !line.contains("darkestdungeon") && !line.contains("town") {
-            // strip the trailing comma from the weald line since it should be the last line in the output
-            if line.contains("weald") {
-                let end_pos = line.len() - 1;
-                let sub = &line[..end_pos];
-                rendered = format!("{}\n{}", rendered, sub);
-            } else {
-                rendered = format!("{}\n{}", rendered, line);
-            }
-        }
-    }
-
-    rendered
+    Ok(serde_json::to_string(&audio_data)?)
 }
 
 /// Convert and export localization strings to the proper game file

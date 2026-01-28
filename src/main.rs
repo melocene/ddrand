@@ -40,7 +40,7 @@ fn main() -> Result<(), slint::PlatformError> {
         std::process::exit(0);
     }
 
-    let app_window = AppWindow::new().unwrap();
+    let app_window = AppWindow::new()?;
     app_window.set_app_window_title(bin_version.into());
     app_window.set_status_text("Application started.".into());
 
@@ -117,7 +117,7 @@ fn main() -> Result<(), slint::PlatformError> {
     };
 
     // If the user cancels the open file dialog a `None` result is returned which is invalid.
-    // In these cases rather than crash store and reuse the last selected directory.
+    // Instead of crashing just reuse the last selected directory.
     // When a new valid directory is selected the mod directory will be assembled from it.
     let mut previous_game_dir = install_path.clone();
     let ui_handle = app_window.as_weak();
@@ -205,13 +205,13 @@ fn main() -> Result<(), slint::PlatformError> {
     app_window.run()
 }
 
+/// Use the Steam protocol to launch the game via Steam using the user's specified settings if any.
+/// This avoids the nees to call the Steam client directly or add complex parsing logic to find the correct binary to run.
+///
+/// Be aware: the `open` crate does not provide a way to wait for the game to launch or check if it is running.
+/// This is a limitation of the crate and not the Steam protocol.
+/// The crate is also fragile on non-Windows systems and may not work as expected. This is inherited from the platform and is not an issue with the crate.
 fn launch_game() -> Result<(), std::io::Error> {
-    // Use the Steam protocol to launch the game via Steam using the user's specified settings if any.
-    // This avoids the nees to call the Steam client directly or add complex parsing logic to find the correct binary to run.
-    //
-    // Be aware: the `open` crate does not provide a way to wait for the game to launch or check if it is running.
-    // This is a limitation of the crate and not the Steam protocol.
-    // The crate is also fragile on non-Windows systems and may not work as expected. This is inherited from the platform and is not an issue with the crate.
     let launch_cmd = format!("steam://rungameid/{}", DARKEST_DUNGEON_APP_ID);
     debug!("Launch command: {}", launch_cmd);
     match open::that_detached(launch_cmd) {
@@ -248,9 +248,7 @@ fn enable_handler(handle: &AppWindow) {
 
 /// Callback to generate a 32 character string to use as an input seed for the random number generator.
 fn generate_clicked() -> String {
-    let seed = seed::generate_seed();
-    debug!("Generated seed: {}", &seed);
-    seed
+    seed::generate_seed()
 }
 
 /// Callback to generate a 32 character string based on the year and week of the year.
@@ -261,7 +259,6 @@ fn weekly_clicked() -> String {
 fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
     let game_dir = gpaths.base.display().to_string();
     let mod_dir = gpaths.mod_dir.display().to_string();
-    //let mode_localization_dir = gpaths.mod_localization.display().to_string();
 
     // Use filesystem state as source of truth, not GUI state
     if let Err(e) = helpers::uninstall_mod(&gpaths.mod_dir) {
@@ -272,9 +269,8 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
     // Attempt to write the seed to a file in the rand_hero mod directory.
     // If this fails just warn and continue as it is not required and is already displayed in the GUI.
     let seed_val = handle.get_seed_value().to_string();
-    info!("Using seed: {}", &seed_val);
-
     let seed_rng = seed::create_rng(&seed_val);
+    info!("Using seed: {}", &seed_val);
 
     helpers::install_mod(&gpaths.mod_dir, &gpaths.mod_localization);
     let seed_file_path = Path::join(&gpaths.mod_dir, "seed.txt");
@@ -394,26 +390,21 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
         }
     }
 
-    // Define the paths for the output audio JSON data.
-    let mod_audio_path = Path::join(&PathBuf::from(&mod_dir), "audio");
-    let mod_audio_file = Path::join(
-        Path::new(&mod_audio_path),
-        "randomizer.raid.load_order.json",
-    );
-
     // Creating the directory is required for additional operations on this file.
     // If it got created continue, otherwise just warn the user as this is not a fatal error for the mod.
-    if fs::create_dir_all(mod_audio_path).is_ok() {
-        if let Ok(json_out) = helpers::extract_audio_json(&gpaths.base) {
-            let output = helpers::render_audio_json(json_out);
+    let mod_audio_path = Path::join(&PathBuf::from(&mod_dir), "audio");
+    if fs::create_dir_all(&mod_audio_path).is_ok() {
+        if let Ok(audio_json_output) = helpers::get_filtered_audio_json(&gpaths.base) {
             match fs::OpenOptions::new()
                 .write(true)
                 .create(true)
                 .truncate(true)
-                .open(mod_audio_file)
-            {
+                .open(Path::join(
+                    Path::new(&mod_audio_path),
+                    "randomizer.raid.load_order.json",
+                )) {
                 Ok(mut outfile) => {
-                    if outfile.write_all(output.as_bytes()).is_ok() {
+                    if outfile.write_all(audio_json_output.as_bytes()).is_ok() {
                         info!("Audio data successfully written for randomizer mod")
                     } else {
                         warn!(
@@ -427,9 +418,13 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
                     );
                 }
             }
+        } else {
+            warn!(
+                "Unable to extract or filter audio JSON data, audio for altered spawns may be missing"
+            );
         }
     } else {
-        warn!("Unable to read audio JSON data, audio for altered spawns may be missing");
+        warn!("Unable to write mod audio directory, audio for altered spawns may be missing");
     }
 
     match helpers::render_project_xml(&PathBuf::from(&game_dir), &PathBuf::from(&mod_dir)) {

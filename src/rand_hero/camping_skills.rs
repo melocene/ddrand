@@ -1,9 +1,8 @@
 use serde_json::Value;
 use std::error::Error;
 
-pub fn _get_camping_skills_data(data: &str) -> Result<Value, Box<dyn Error>> {
-    let camping_skills_data = serde_json::from_str(data)?;
-    Ok(camping_skills_data)
+pub fn _get_camping_skills_data(data: &str) -> Result<Value, serde_json::Error> {
+    serde_json::from_str(data)
 }
 
 pub fn _randomize_camping_skills(camping_skills_data: Value) -> Result<Value, Box<dyn Error>> {
