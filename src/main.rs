@@ -1,6 +1,7 @@
 // Prevent a console window opening when running the application.
+// Allow it for tests when using `cargo test` in order to see test output.
 // Ref: https://github.com/slint-ui/slint/issues/3235
-#![windows_subsystem = "windows"]
+#![cfg_attr(not(test), windows_subsystem = "windows")]
 
 slint::include_modules!();
 
