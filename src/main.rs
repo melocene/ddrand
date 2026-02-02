@@ -15,6 +15,7 @@ use std::{
 };
 
 use crate::helpers::GamePath;
+use crate::rand_hero::camping_skills;
 
 mod cli;
 mod helpers;
@@ -284,6 +285,83 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
         );
     } else {
         info!("Seed written to '{}'", &seed_file_path.display());
+    }
+
+    if handle.get_rand_camping_skills() {
+        let skills_file_path = &gpaths
+            .base
+            .join("raid")
+            .join("camping")
+            .join("default.camping_skills.json");
+        match camping_skills::parse_from_file(skills_file_path) {
+            Ok(skills) => {
+                info!(
+                    "Successfully read camping skill data from: {}",
+                    &skills_file_path.display().to_string()
+                );
+                let randomized_camp_skills = camping_skills::randomize(skills, seed_rng.clone());
+                match randomized_camp_skills {
+                    Ok(skill_data) => {
+                        let camp_skills_dir = &gpaths.mod_dir.join("raid").join("camping");
+                        match fs::create_dir_all(camp_skills_dir) {
+                            Ok(_) => {
+                                info!("Created directory: {}", &camp_skills_dir.display());
+                                match camping_skills::write_to_file(
+                                    &skill_data,
+                                    &camp_skills_dir.join("default.camping_skills.json"),
+                                ) {
+                                    Ok(_) => info!(
+                                        "Randomized camping skills written to: {}",
+                                        &camp_skills_dir
+                                            .join("default.camping_skills.json")
+                                            .display()
+                                    ),
+                                    Err(e) => {
+                                        error!(
+                                            "Unable to write randomized camping skills data\nReason: {}",
+                                            e
+                                        );
+                                        handle.set_status_text(
+                                            format!(
+                                                "Error: Unable to write randomized camping skills data: {}",
+                                                e
+                                            )
+                                            .into(),
+                                        );
+                                        return;
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                error!(
+                                    "Could not create directory: {}\nReason: {}",
+                                    &camp_skills_dir.display(),
+                                    e
+                                );
+                                handle.set_status_text(
+                                    format!("Error: Could not create directory: {}", e).into(),
+                                );
+                                return;
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        error!("Unable to randomize camping skills data\nReason: {}", e);
+                        handle.set_status_text(
+                            format!("Error: Unable to randomize camping skills data: {}", e).into(),
+                        );
+                        return;
+                    }
+                }
+            }
+            Err(e) => {
+                error!("Unable to read camping skills data\nReason: {}", e);
+                handle.set_status_text(
+                    format!("Error: Unable to read camping skills data: {}", e).into(),
+                );
+                return;
+            }
+        }
     }
 
     if handle.get_rand_combat_skills() {
