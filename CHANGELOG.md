@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org).
 ### Added
 
 - Add `Launch Game` button to start the game directly
+- Camping skills can now be randomized
 
 ### Changed
 
