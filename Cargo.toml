@@ -2,7 +2,7 @@
 name = "ddrand"
 version = "0.4.0"
 edition = "2024"
-rust-version = "1.92" # Enforce minimum Rust compiler version.
+rust-version = "1.93" # Enforce minimum Rust compiler version.
 publish = false
 authors = ["melocene", "ddrand contributors"]
 homepage = "https://github.com/melocene/ddrand"

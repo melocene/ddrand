@@ -33,7 +33,7 @@ by double clicking the icon or from the command line.
 
 ### Source
 
-**Requirements:** Rust 1.78 or newer
+**Requirements:** Current stable version of [Rust](https://www.rust-lang.org/tools/install) as noted in `Cargo.toml`
 
 After obtaining the `ddrand` source archive or cloning the [repository](https://github.com/melocene/ddrand), change into the directory and run:
 
