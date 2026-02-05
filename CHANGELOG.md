@@ -4,7 +4,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com),
 and this project adheres to [Semantic Versioning](https://semver.org).
 
-## [ ] - Unreleased
+## [] - Unreleased
+
+## [0.4.0] - 2026-02-05
+
+### Added
+
+- Add `Launch Game` button to start the game directly
+- Camping skills can now be randomized
+
+### Changed
+
+- Steam and game path detection now uses an existing library for more robust detection and reporting
+- Window now auto-sizes to fit content
+- Confirmation popups are now properly centered
+- [dev] Swapped logger from `tracing` to `flexi_logger` which is more lightweight and simpler to configure
+
+### Fixed
+
+- Application no longer closes unexpectedly on errors; error messages are now displayed in the status bar
+- When replacing the `Mace Bash` and `Judgement` skills on Vestal the new skill icons would be swapped which is fixed by overriding the icon numbering
+- Reading and writing skill data now uses sorts and deduplicates to avoid the same seed giving different outputs
+- Fixed potential crash when a new mod was attempting to be written before the previous was fully removed
+- [dev] Logger by default adds a full timestamp to the log filename, this is now overridden to only the current date, suppressing the library's builtin naming
 
 ## [0.3.1] - 2026-01-12
 

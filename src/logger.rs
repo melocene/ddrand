@@ -1,34 +1,36 @@
-use std::fs::OpenOptions;
-use tracing_appender::non_blocking;
-use tracing_subscriber::{filter::LevelFilter, fmt::time::ChronoLocal, prelude::*};
+use chrono::Local;
+use flexi_logger::{FileSpec, Logger, LoggerHandle, WriteMode};
+use log::*;
 
-pub fn init(level: LevelFilter, log_file: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
-    let mut layers = vec![];
+pub fn init(
+    is_debug: bool,
+    log_basename: &str,
+) -> Result<LoggerHandle, flexi_logger::FlexiLoggerError> {
+    let handle = Logger::try_with_env_or_str(if is_debug { "debug" } else { "info" })?
+        .format(format)
+        .log_to_file(
+            FileSpec::default()
+                .directory(".")
+                .basename(log_basename)
+                .suffix("log")
+                .suppress_timestamp(),
+        )
+        .write_mode(WriteMode::Async)
+        .append()
+        .start()?;
+    Ok(handle)
+}
 
-    // Ignore file writing if a filename was not provided for the log.
-    // Even with a valid filename, logging to a file is considered not required so will get ignored on write errors.
-    if let Some(fname) = log_file {
-        match OpenOptions::new().append(true).create(true).open(fname) {
-            Ok(log_file_path) => {
-                let (non_blocking, _guard) = non_blocking(log_file_path);
-                let log_file = tracing_subscriber::fmt::layer()
-                    .with_ansi(false)
-                    .with_timer(ChronoLocal::new("%Y-%m-%d %H:%M:%S".to_string()))
-                    .with_target(false)
-                    .with_writer(non_blocking)
-                    .compact()
-                    .with_filter(level)
-                    .boxed();
-                layers.push(log_file);
-            }
-            Err(e) => {
-                eprintln!("ERROR: Could not write log file, will only log to stdout");
-                eprintln!("{}", e);
-            }
-        }
-    }
-
-    tracing_subscriber::registry().with(layers).init();
-
-    Ok(())
+fn format(
+    w: &mut dyn std::io::Write,
+    _now: &mut flexi_logger::DeferredNow,
+    record: &Record,
+) -> Result<(), std::io::Error> {
+    write!(
+        w,
+        "{} [{:5}] {}",
+        Local::now().format("%Y-%m-%d %H:%M:%S"),
+        record.level(),
+        record.args()
+    )
 }

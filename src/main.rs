@@ -1,15 +1,12 @@
 // Prevent a console window opening when running the application.
+// Allow it for tests when using `cargo test` in order to see test output.
 // Ref: https://github.com/slint-ui/slint/issues/3235
-#![windows_subsystem = "windows"]
+#![cfg_attr(not(test), windows_subsystem = "windows")]
 
 slint::include_modules!();
 
-use chrono::Datelike;
 use clap::Parser;
 use log::*;
-use rand::{Rng, distr::Alphanumeric, rng, rngs::StdRng};
-use rand_pcg::Pcg64;
-use rand_seeder::Seeder;
 use rfd::FileDialog;
 use std::collections::HashMap;
 use std::{
@@ -17,81 +14,86 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
 };
-use tracing_subscriber::filter::LevelFilter;
 
 use crate::helpers::GamePath;
+use crate::rand_hero::camping_skills;
 
 mod cli;
 mod helpers;
 mod logger;
+mod rand_enemy;
 mod rand_hero;
-mod rand_mash;
+mod seed;
+mod steam;
+
+const DARKEST_DUNGEON_APP_ID: u32 = 262060;
 
 fn main() -> Result<(), slint::PlatformError> {
-    let app_window = AppWindow::new().unwrap();
+    let bin_version = if cfg!(debug_assertions) {
+        format!("{} DEVELOPMENT BUILD", env!("CARGO_BIN_NAME"))
+    } else {
+        format!("{} v{}", env!("CARGO_BIN_NAME"), env!("CARGO_PKG_VERSION"))
+    };
+
     let opts = cli::Opts::parse();
 
     if opts.version {
-        println!("{} v{}", env!("CARGO_BIN_NAME"), env!("CARGO_PKG_VERSION"));
+        println!("{}", bin_version);
         std::process::exit(0);
     }
 
-    // Window title should match the binary's name and include the version information.
-    let window_title = format!("{} v{}", env!("CARGO_BIN_NAME"), env!("CARGO_PKG_VERSION"));
-    app_window.set_app_window_title(window_title.into());
+    let app_window = AppWindow::new()?;
+    app_window.set_app_window_title(bin_version.into());
     app_window.set_status_text("Application started.".into());
 
     // Setup the logger to use the application name and current date.
     // Log lines will append to the same days logs to avoid cluttering up the directory with small log files.
     let log_date = chrono::Local::now().format("%Y%m%d").to_string();
-    let log_filename = format!("{}_{}.log", env!("CARGO_BIN_NAME"), log_date);
+    let log_basename = format!("{}_{}", env!("CARGO_BIN_NAME"), log_date);
     // If compiled in `debug` mode or if provided the default flag print debug information to the log file.
-    let _ = logger::init(
-        if opts.debug || cfg!(debug_assertions) {
-            LevelFilter::DEBUG
-        } else {
-            LevelFilter::INFO
-        },
-        Some(&log_filename),
-    );
+    // The guard must be kept alive to ensure logs are flushed on exit.
+    let _log_handle = match logger::init(opts.debug || cfg!(debug_assertions), &log_basename) {
+        Ok(handle) => Some(handle),
+        Err(e) => {
+            eprintln!("ERROR: Failed to initialize logger: {}", e);
+            None
+        }
+    };
     debug!("Debug mode enabled.");
 
-    // Attempt to load the seed from the Windows registry otherwise return a default.
     // Clicking the `...` will allow the user to choose some other directory if automatic detection
     // fails or is incorrect.
     // Do not allow user to directly input strings for safety.
-    let install_path = match helpers::get_install_path() {
+    let install_path = match steam::get_darkest_dungeon_install_path(DARKEST_DUNGEON_APP_ID) {
         Ok(path_result) => {
-            info!("Autodetected installation path: \'{}\'", &path_result);
-            path_result
+            // Canonicalize to normalize path format on Windows
+            let normalized = dunce::canonicalize(&path_result).unwrap_or(path_result);
+            info!(
+                "Autodetected game installation path: \'{}\'",
+                &normalized.display()
+            );
+            normalized
         }
         Err(e) => {
-            error!("Autodetection failed for game installation.\nReason: {}", e);
-            String::new()
+            warn!("Autodetection failed for game installation.\nReason: {}", e);
+            PathBuf::new()
         }
     };
-    let tmp_ipath = Path::new(&install_path);
-    if !tmp_ipath.exists() || !tmp_ipath.is_dir() {
+    if !install_path.exists() || !install_path.is_dir() {
         warn!(
             "Installation path does not exist or is not a directory. Please use '...' button to select installation directory."
         );
-        // Set empty game directory in UI
-        let window = app_window.as_weak().unwrap();
-        window.set_game_dir("AUTODETECT_FAILED".into());
-        window.set_status_text("Autodetection failed for game installation.".into());
+        app_window.set_game_dir("AUTODETECT_FAILED".into());
+        app_window.set_status_text("Autodetection failed for game installation.".into());
     } else {
-        // Set detected game directory in UI
-        app_window
-            .as_weak()
-            .unwrap()
-            .set_game_dir(install_path.clone().into());
+        app_window.set_game_dir(install_path.display().to_string().into());
     }
 
     // Return a dictionary of paths for the various game and mod data directories.
     // Used for initial UI setup; paths are regenerated when Enable is clicked.
     match helpers::get_data_dirs(&install_path) {
         Ok(paths) => {
-            info!("Mod directory will be:\'{}\'", paths.mod_dir.display());
+            info!("Mod directory will be: \'{}\'", paths.mod_dir.display());
             app_window.set_mod_dir(paths.mod_dir.display().to_string().into());
             // If the mod directory exist, assume the mod is installed and enable disable button.
             if paths.mod_dir.exists() && paths.mod_dir.is_dir() {
@@ -100,7 +102,7 @@ fn main() -> Result<(), slint::PlatformError> {
             paths
         }
         Err(e) => {
-            error!(
+            warn!(
                 "Unable to obtain assemble required game and mod paths\nReason: {}",
                 e
             );
@@ -117,17 +119,17 @@ fn main() -> Result<(), slint::PlatformError> {
     };
 
     // If the user cancels the open file dialog a `None` result is returned which is invalid.
-    // In these cases rather than crash store and reuse the last selected directory.
+    // Instead of crashing just reuse the last selected directory.
     // When a new valid directory is selected the mod directory will be assembled from it.
-    let mut previous_game_dir = install_path;
+    let mut previous_game_dir = install_path.clone();
     let ui_handle = app_window.as_weak();
     app_window.on_select_dir(move || {
         let game_dir = match FileDialog::new().pick_folder() {
             Some(selected_dir) => {
-                previous_game_dir = selected_dir.display().to_string();
+                previous_game_dir = selected_dir.to_path_buf();
                 selected_dir
             }
-            None => PathBuf::from(previous_game_dir.clone()),
+            None => previous_game_dir.clone(),
         };
         ui_handle
             .unwrap()
@@ -176,25 +178,71 @@ fn main() -> Result<(), slint::PlatformError> {
     app_window.on_disable_clicked_confirmed(move || {
         let handle = ui_handle.unwrap();
         handle.set_status_text("Starting uninstallation, please wait.".into());
-        helpers::uninstall_mod(Path::new(&handle.get_mod_dir().to_string()));
-        handle.set_is_mod_installed(false);
-        handle.set_status_text("ddrand mod uninstalled successfully.".into());
+        match helpers::uninstall_mod(Path::new(&handle.get_mod_dir().to_string())) {
+            Ok(_) => {
+                handle.set_is_mod_installed(false);
+                handle.set_status_text("ddrand mod uninstalled successfully.".into());
+            }
+            Err(e) => {
+                handle.set_status_text(format!("Error: {}", e).into());
+            }
+        }
+    });
+
+    let ui_handle = app_window.as_weak();
+    app_window.on_launch_game(move || {
+        let handle = ui_handle.unwrap();
+        handle.set_status_text("Launching game via Steam, please wait...".into());
+        info!("Launching game via Steam...");
+        match launch_game() {
+            Ok(_) => {
+                handle.set_status_text("Game launched successfully.".into());
+            }
+            Err(_) => {
+                handle.set_status_text("Unable to launch game, see the log for details.".into());
+            }
+        }
     });
 
     app_window.run()
 }
 
-fn enable_handler(handle: &AppWindow) {
-    let game_dir = handle.get_game_dir().to_string();
-    match helpers::get_data_dirs(&game_dir) {
-        Ok(game_paths) => {
-            handle.set_status_text("Starting randomization, please wait.".into());
-            enable_mod(handle, &game_paths);
-            handle.set_is_mod_installed(true);
-            handle.set_status_text("ddrand mod installed successfully.".into());
+/// Use the Steam protocol to launch the game via Steam using the user's specified settings if any.
+/// This avoids the nees to call the Steam client directly or add complex parsing logic to find the correct binary to run.
+///
+/// Be aware: the `open` crate does not provide a way to wait for the game to launch or check if it is running.
+/// This is a limitation of the crate and not the Steam protocol.
+/// The crate is also fragile on non-Windows systems and may not work as expected. This is inherited from the platform and is not an issue with the crate.
+fn launch_game() -> Result<(), std::io::Error> {
+    let launch_cmd = format!("steam://rungameid/{}", DARKEST_DUNGEON_APP_ID);
+    debug!("Launch command: {}", launch_cmd);
+    match open::that_detached(launch_cmd) {
+        Ok(_) => {
+            info!("Game launched via Steam");
+            Ok(())
         }
         Err(e) => {
-            error!("Unable to assemble game paths: {}", e);
+            warn!("Unable to launch game via Steam: {}", e);
+            Err(e)
+        }
+    }
+}
+
+fn enable_handler(handle: &AppWindow) {
+    let game_dir = handle.get_game_dir().to_string();
+    match helpers::get_data_dirs(Path::new(&game_dir)) {
+        Ok(game_paths) => {
+            handle.set_status_text("Starting randomization, please wait.".into());
+            let handle_weak = handle.as_weak();
+            slint::Timer::single_shot(std::time::Duration::from_millis(50), move || {
+                let handle = handle_weak.unwrap();
+                enable_mod(&handle, &game_paths);
+                handle.set_is_mod_installed(true);
+                handle.set_status_text("ddrand mod installed successfully.".into());
+            });
+        }
+        Err(e) => {
+            warn!("Unable to assemble game paths: {}", e);
             handle.set_status_text("Error: Invalid game directory.".into());
         }
     }
@@ -202,49 +250,31 @@ fn enable_handler(handle: &AppWindow) {
 
 /// Callback to generate a 32 character string to use as an input seed for the random number generator.
 fn generate_clicked() -> String {
-    rng()
-        .sample_iter(&Alphanumeric)
-        .map(char::from)
-        .take(32)
-        .collect::<String>()
+    seed::generate_seed()
 }
 
 /// Callback to generate a 32 character string based on the year and week of the year.
 fn weekly_clicked() -> String {
-    let current_date = chrono::Local::now().date_naive();
-    let current_week = current_date.iso_week().week0();
-    debug!("Current week: {}", current_week);
-    let week_seed = format!("{}{}seedoftheweek", current_date.year(), current_week);
-    debug!("Weekly base seed: {}", &week_seed);
-    let week_rng: Pcg64 = Seeder::from(week_seed).into_rng();
-    let wseed = week_rng
-        .sample_iter(&Alphanumeric)
-        .map(char::from)
-        .take(32)
-        .collect::<String>();
-    debug!("Seed of week {}: {}", current_week, wseed);
-
-    wseed
+    seed::generate_weekly_seed()
 }
 
 fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
     let game_dir = gpaths.base.display().to_string();
     let mod_dir = gpaths.mod_dir.display().to_string();
-    let mode_localization_dir = gpaths.mod_localization.display().to_string();
 
-    if handle.get_is_mod_installed() {
-        helpers::uninstall_mod(&gpaths.mod_dir);
+    // Use filesystem state as source of truth, not GUI state
+    if let Err(e) = helpers::uninstall_mod(&gpaths.mod_dir) {
+        handle.set_status_text(format!("Error: {}", e).into());
+        return;
     }
 
     // Attempt to write the seed to a file in the rand_hero mod directory.
     // If this fails just warn and continue as it is not required and is already displayed in the GUI.
     let seed_val = handle.get_seed_value().to_string();
+    let seed_rng = seed::create_rng(&seed_val);
     info!("Using seed: {}", &seed_val);
 
-    // create the new StdRng from the provided seed value
-    let seed_rng: StdRng = Seeder::from(&seed_val).into_rng();
-
-    helpers::install_mod(&mod_dir, &mode_localization_dir);
+    helpers::install_mod(&gpaths.mod_dir, &gpaths.mod_localization);
     let seed_file_path = Path::join(&gpaths.mod_dir, "seed.txt");
     if let Err(e) = fs::File::create(&seed_file_path)
         .and_then(|mut seed_file| seed_file.write_all(seed_val.as_bytes()))
@@ -258,24 +288,102 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
         info!("Seed written to '{}'", &seed_file_path.display());
     }
 
+    if handle.get_rand_camping_skills() {
+        let skills_file_path = &gpaths
+            .base
+            .join("raid")
+            .join("camping")
+            .join("default.camping_skills.json");
+        match camping_skills::parse_from_file(skills_file_path) {
+            Ok(skills) => {
+                info!(
+                    "Successfully read camping skill data from: {}",
+                    &skills_file_path.display().to_string()
+                );
+                let randomized_camp_skills = camping_skills::randomize(skills, seed_rng.clone());
+                match randomized_camp_skills {
+                    Ok(skill_data) => {
+                        let camp_skills_dir = &gpaths.mod_dir.join("raid").join("camping");
+                        match fs::create_dir_all(camp_skills_dir) {
+                            Ok(_) => {
+                                info!("Created directory: {}", &camp_skills_dir.display());
+                                match camping_skills::write_to_file(
+                                    &skill_data,
+                                    &camp_skills_dir.join("default.camping_skills.json"),
+                                ) {
+                                    Ok(_) => info!(
+                                        "Randomized camping skills written to: {}",
+                                        &camp_skills_dir
+                                            .join("default.camping_skills.json")
+                                            .display()
+                                    ),
+                                    Err(e) => {
+                                        error!(
+                                            "Unable to write randomized camping skills data\nReason: {}",
+                                            e
+                                        );
+                                        handle.set_status_text(
+                                            format!(
+                                                "Error: Unable to write randomized camping skills data: {}",
+                                                e
+                                            )
+                                            .into(),
+                                        );
+                                        return;
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                error!(
+                                    "Could not create directory: {}\nReason: {}",
+                                    &camp_skills_dir.display(),
+                                    e
+                                );
+                                handle.set_status_text(
+                                    format!("Error: Could not create directory: {}", e).into(),
+                                );
+                                return;
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        error!("Unable to randomize camping skills data\nReason: {}", e);
+                        handle.set_status_text(
+                            format!("Error: Unable to randomize camping skills data: {}", e).into(),
+                        );
+                        return;
+                    }
+                }
+            }
+            Err(e) => {
+                error!("Unable to read camping skills data\nReason: {}", e);
+                handle.set_status_text(
+                    format!("Error: Unable to read camping skills data: {}", e).into(),
+                );
+                return;
+            }
+        }
+    }
+
     if handle.get_rand_combat_skills() {
-        // Attempt to create the nessesary directory and exit if this fails as it is required.
+        // Attempt to create the necessary directory and return if this fails as it is required.
         match fs::create_dir_all(&gpaths.mod_heroes) {
             Ok(_) => debug!("Created directory: {}", &gpaths.mod_heroes.display()),
             Err(e) => {
                 error!(
                     "Could not create directory: {}\nReason: {}",
-                    &gpaths.mod_dungeon.display(),
+                    &gpaths.mod_heroes.display(),
                     e
                 );
-                std::process::exit(1);
+                handle.set_status_text(format!("Error: Could not create directory: {}", e).into());
+                return;
             }
         }
 
-        let files = rand_hero::get_data_files(&gpaths.base_heroes, &None).unwrap();
-        let heroes = rand_hero::extract_data(&files);
+        let files = rand_hero::combat_skills::get_data_files(&gpaths.base_heroes, &None).unwrap();
+        let heroes = rand_hero::combat_skills::extract_data(&files);
 
-        let localization_map = rand_hero::randomize(
+        let localization_map = rand_hero::combat_skills::randomize(
             &gpaths.base_heroes,
             &gpaths.mod_heroes,
             heroes,
@@ -283,10 +391,11 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
         );
 
         info!("Extracting localization data");
-        match rand_hero::extract_localizations(&gpaths.base) {
+        match rand_hero::combat_skills::extract_localizations(&gpaths.base) {
             Ok(translation) => {
                 info!("Rendering new localization XML");
-                match rand_hero::render_localizations(translation, localization_map) {
+                match rand_hero::combat_skills::render_localizations(translation, localization_map)
+                {
                     Ok(rendered) => {
                         let localization_filename = "rand_hero_en.string_table.xml";
                         let localization_xml_path =
@@ -299,7 +408,10 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
                                 &localization_xml_path.to_str().unwrap(),
                                 e
                             );
-                            std::process::exit(1);
+                            handle.set_status_text(
+                                format!("Error: Unable to write localization file: {}", e).into(),
+                            );
+                            return;
                         } else {
                             info!(
                                 "{} written to \'{}\'",
@@ -309,9 +421,11 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
                         }
                     }
                     Err(e) => {
-                        // exit if the localization xml cannot be rendered as it is required by the game
                         error!("Unable to render localization data\nReason: {}", e);
-                        std::process::exit(1);
+                        handle.set_status_text(
+                            format!("Error: Unable to render localization data: {}", e).into(),
+                        );
+                        return;
                     }
                 }
             }
@@ -320,13 +434,16 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
                     "Unable to read default string table to build localization\nReason: {}",
                     e
                 );
-                std::process::exit(1);
+                handle.set_status_text(
+                    format!("Error: Unable to read localization data: {}", e).into(),
+                );
+                return;
             }
         }
     }
 
     if handle.get_rand_boss() || handle.get_rand_monster() {
-        // Attempt to create the nessesary directory and exit if this fails as it is required.
+        // Attempt to create the necessary directory and return if this fails as it is required.
         match fs::create_dir_all(&gpaths.mod_dungeon) {
             Ok(_) => debug!("Created directory: {}", &gpaths.mod_dungeon.display()),
             Err(e) => {
@@ -335,13 +452,14 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
                     &gpaths.mod_dungeon.display(),
                     e
                 );
-                std::process::exit(1);
+                handle.set_status_text(format!("Error: Could not create directory: {}", e).into());
+                return;
             }
         }
-        if let Ok(files) = rand_mash::get_data_files(&gpaths.base_dungeon, &None)
-            && let Ok(mashes) = rand_mash::extract_data(&files)
+        if let Ok(files) = rand_enemy::mash::get_data_files(&gpaths.base_dungeon, &None)
+            && let Ok(mashes) = rand_enemy::mash::extract_data(&files)
         {
-            rand_mash::randomize(
+            rand_enemy::mash::randomize(
                 &gpaths.mod_dungeon,
                 mashes,
                 seed_rng,
@@ -351,25 +469,21 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
         }
     }
 
-    // Define the paths for the output audio JSON data.
-    let mod_audio_path = Path::join(&PathBuf::from(&mod_dir), "audio");
-    let mod_audio_file = Path::join(
-        Path::new(&mod_audio_path),
-        "randomizer.raid.load_order.json",
-    );
-
     // Creating the directory is required for additional operations on this file.
     // If it got created continue, otherwise just warn the user as this is not a fatal error for the mod.
-    if fs::create_dir_all(mod_audio_path).is_ok() {
-        if let Ok(json_out) = helpers::extract_audio_json(&gpaths.base) {
-            let output = helpers::render_audio_json(json_out);
+    let mod_audio_path = Path::join(&PathBuf::from(&mod_dir), "audio");
+    if fs::create_dir_all(&mod_audio_path).is_ok() {
+        if let Ok(audio_json_output) = helpers::get_filtered_audio_json(&gpaths.base) {
             match fs::OpenOptions::new()
-                .append(true)
+                .write(true)
                 .create(true)
-                .open(mod_audio_file)
-            {
+                .truncate(true)
+                .open(Path::join(
+                    Path::new(&mod_audio_path),
+                    "randomizer.raid.load_order.json",
+                )) {
                 Ok(mut outfile) => {
-                    if outfile.write_all(output.as_bytes()).is_ok() {
+                    if outfile.write_all(audio_json_output.as_bytes()).is_ok() {
                         info!("Audio data successfully written for randomizer mod")
                     } else {
                         warn!(
@@ -383,9 +497,13 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
                     );
                 }
             }
+        } else {
+            warn!(
+                "Unable to extract or filter audio JSON data, audio for altered spawns may be missing"
+            );
         }
     } else {
-        warn!("Unable to read audio JSON data, audio for altered spawns may be missing");
+        warn!("Unable to write mod audio directory, audio for altered spawns may be missing");
     }
 
     match helpers::render_project_xml(&PathBuf::from(&game_dir), &PathBuf::from(&mod_dir)) {
@@ -399,18 +517,20 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
                     &project_xml_path.to_str().unwrap(),
                     e
                 );
-                std::process::exit(1);
+                handle.set_status_text(format!("Error: Unable to write project.xml: {}", e).into());
+                return;
             } else {
                 info!("project.xml written to '{}'", &project_xml_path.display());
             }
         }
         Err(e) => {
-            // exit if the project.xml cannot be rendered as it is required by the game
-            // without it the mod will fail to be recognized and loaded
             error!("Unable to render project data\nReason: {}", e);
-            std::process::exit(1);
+            handle.set_status_text(format!("Error: Unable to render project data: {}", e).into());
+            return;
         }
     }
 
-    helpers::run_workshop_tool(&PathBuf::from(game_dir), &PathBuf::from(mod_dir));
+    if let Err(e) = helpers::run_workshop_tool(&PathBuf::from(game_dir), &PathBuf::from(mod_dir)) {
+        handle.set_status_text(format!("Error: {}", e).into());
+    }
 }

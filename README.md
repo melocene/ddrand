@@ -20,7 +20,7 @@ The following are included as options for randomization:
   - [Limitations](#limitations)
   - [Known Issues](#known-issues)
   - [Contributing](#contributing)
-  - [AI Policy](#ai-policy)
+  - [AI Policy](./AI_POLICY.md)
   - [Version Policy](#version-policy)
   - [License](#license)
 
@@ -33,7 +33,7 @@ by double clicking the icon or from the command line.
 
 ### Source
 
-**Requirements:** Rust 1.78 or newer
+**Requirements:** Current stable version of [Rust](https://www.rust-lang.org/tools/install) as noted in `Cargo.toml`
 
 After obtaining the `ddrand` source archive or cloning the [repository](https://github.com/melocene/ddrand), change into the directory and run:
 
@@ -96,17 +96,18 @@ can include bug reports or updated documentation as an example.
 
 For details specific to code contributions please see the [contribution guidelines](CONTRIBUTING.md).
 
-## AI Policy
-
-This project is, and should remain, written primarily by humans for humans. Regardless of development workflow used a human will review all submissions before they can or will be merged.
-
-However, generative AI is fast becoming a first-party feature in most development environments, including GitHub itself. If you use Generative AI to write the vast majority of your submission (e.g., agent-based or vibe coding) then you must document your use of AI in your pull request. Please include the service you used and/or model that generated the code. Ensure any AI usage adheres to any license or other restrictions which may apply.
-
-Undisclosed AI usage may result in code contirbutions being removed or the banning of a developer from contributing to this project.
-
 ## Version Policy
 
 This project adheres to [Semantic Versioning](https://semver.org).
+
+What does this mean for you? If you are simply using `ddrand` to generate and play the mod, nothing. The most important thing to remember is any version number which starts with a zero, 
+for instance v0.3.1, usability and functionality changes may be added or removed at any time with or without notice. The application is still expected to be reasonably stable 
+for a given release despite being subject to change.
+
+For developers, the right most number is used for bugfixes or other minor code changes behind the scenes that do not directly affect users. The middle number 
+should be incremented when features are added or other user facing changes happen without changing application functionality. The left most number will be incremented for 
+large user facing changes such as UI changes or major change in functionality that users will directly interact with. Note that this does not make it a hard and fast rule, 
+but something to be mindful of when incrementing and releasing a new version.
 
 All notable changes to this project can be found in the [changelog](CHANGELOG.md).
 

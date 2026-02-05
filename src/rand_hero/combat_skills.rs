@@ -14,6 +14,19 @@ use std::path::{Path, PathBuf};
 /// Translations for numeric positions to strings
 const POS_STR: &[&str] = &["one", "two", "three", "four", "five", "six", "seven"];
 
+/// Override mappings for heroes where icon order doesn't match file order.
+/// Returns None to use default file order, Some(pos) to override.
+/// Position 0 = "one", 1 = "two", etc.
+fn get_icon_position_override(hero: &str, skill: &str) -> Option<usize> {
+    match (hero, skill) {
+        // Vestal: first two skills have swapped icon positions
+        ("vestal", "mace_bash") => Some(1),
+        ("vestal", "judgement") => Some(0),
+        // Add other exceptions as discovered
+        _ => None,
+    }
+}
+
 /// Data read from the various hero class files
 #[derive(Debug, Clone)]
 pub struct Hero {
@@ -51,7 +64,12 @@ pub fn get_data_files(
     excludes: &Option<Vec<String>>,
 ) -> Result<Vec<PathBuf>, Box<dyn Error>> {
     let mut datafiles: Vec<PathBuf> = Vec::new();
-    for hdir in hero_paths.values() {
+
+    // Sort hero paths by key for deterministic ordering (HashMap iteration is randomized)
+    let mut sorted_paths: Vec<_> = hero_paths.iter().collect();
+    sorted_paths.sort_by_key(|(k, _)| *k);
+
+    for (_, hdir) in sorted_paths {
         match fs::read_dir(hdir) {
             Ok(fread) => {
                 for item in fread {
@@ -73,13 +91,13 @@ pub fn get_data_files(
                             }
                         }
                         Err(e) => {
-                            error!("Could not read data\nReason: {}", e);
+                            warn!("Could not read data\nReason: {}", e);
                         }
                     }
                 }
             }
             Err(e) => {
-                error!(
+                warn!(
                     "Unable to access directory {}\nReason: {}",
                     &hdir.to_string_lossy(),
                     e
@@ -87,6 +105,9 @@ pub fn get_data_files(
             }
         }
     }
+
+    // Sort final result for consistent ordering across filesystem implementations
+    datafiles.sort();
 
     Ok(datafiles)
 }
@@ -144,6 +165,16 @@ pub fn extract_data(datafiles: &[PathBuf]) -> Vec<Hero> {
             }
         }
 
+        hero.sknames.dedup();
+
+        if hero.sknames.len() != tmp_data.len() {
+            warn!(
+                "Skill count mismatch for skill names and data: {} != {}",
+                hero.sknames.len(),
+                tmp_data.len()
+            );
+        }
+
         // for each skill we read in create a new Skill object and assign it to the hero
         for (idx, skill_name) in tmp_data.keys().enumerate() {
             let skill = Skill {
@@ -153,7 +184,6 @@ pub fn extract_data(datafiles: &[PathBuf]) -> Vec<Hero> {
                 data: tmp_data.get(skill_name).unwrap().to_owned(),
             };
 
-            hero.sknames.dedup();
             hero.skills.push(skill);
         }
 
@@ -221,8 +251,9 @@ pub fn randomize(
         let hpath = Path::join(&hdir, Path::new(&format!("{}.info.darkest", &hero.name)));
         fs::create_dir_all(hdir).unwrap();
         let mut of = OpenOptions::new()
-            .append(true)
+            .write(true)
             .create(true)
+            .truncate(true)
             .open(hpath)
             .unwrap();
 
@@ -266,12 +297,19 @@ pub fn randomize(
 
             // copy skills icons for the randomized skills to the appropriate hero for in game alignment
             let sk_class = &hgroup[idx].class;
-            let sk_pos = hgroup[idx].pos;
+            // use override position if available for source skill, otherwise use file order
+            let sk_pos =
+                get_icon_position_override(sk_class, &hgroup[idx].name).unwrap_or(hgroup[idx].pos);
             let from_fname = format!("{}.ability.{}.png", &sk_class, POS_STR[sk_pos]);
             let from_path = Path::join(base_hpaths.get(sk_class).unwrap(), Path::new(&from_fname));
+            // use override position if available for target skill slot, otherwise use file order
+            let target_pos = get_icon_position_override(&hero.name, hsname).unwrap_or(idx);
             let to_fname: PathBuf = vec![
                 Path::new(&hero.name),
-                Path::new(&format!("{}.ability.{}.png", &hero.name, POS_STR[idx])),
+                Path::new(&format!(
+                    "{}.ability.{}.png",
+                    &hero.name, POS_STR[target_pos]
+                )),
             ]
             .into_iter()
             .collect();
@@ -420,4 +458,27 @@ fn shuffle_skills(
     }
 
     skill_groups
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_icon_position_override_override() {
+        assert_eq!(get_icon_position_override("vestal", "mace_bash"), Some(1));
+        assert_eq!(get_icon_position_override("vestal", "judgement"), Some(0));
+    }
+
+    #[test]
+    fn test_get_icon_position_override_no_override() {
+        assert_eq!(get_icon_position_override("hero", "skill"), None);
+        assert_eq!(get_icon_position_override("hero", "skill2"), None);
+    }
+
+    #[test]
+    fn test_get_icon_position_override_invalid_combination() {
+        assert_eq!(get_icon_position_override("hero1", "mace_bash"), None);
+        assert_eq!(get_icon_position_override("vestal", "nonexistent"), None);
+    }
 }
