@@ -1,6 +1,6 @@
 use chrono::Datelike;
 use log::debug;
-use rand::{Rng, distr::Alphanumeric, rng, rngs::StdRng};
+use rand::{RngExt, distr::Alphanumeric, rng, rngs::StdRng};
 use rand_pcg::Pcg64;
 use rand_seeder::Seeder;
 

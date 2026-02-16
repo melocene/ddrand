@@ -271,7 +271,7 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
     // Attempt to write the seed to a file in the rand_hero mod directory.
     // If this fails just warn and continue as it is not required and is already displayed in the GUI.
     let seed_val = handle.get_seed_value().to_string();
-    let seed_rng = seed::create_rng(&seed_val);
+    let mut seed_rng = seed::create_rng(&seed_val);
     info!("Using seed: {}", &seed_val);
 
     helpers::install_mod(&gpaths.mod_dir, &gpaths.mod_localization);
@@ -300,7 +300,7 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
                     "Successfully read camping skill data from: {}",
                     &skills_file_path.display().to_string()
                 );
-                let randomized_camp_skills = camping_skills::randomize(skills, seed_rng.clone());
+                let randomized_camp_skills = camping_skills::randomize(skills, &mut seed_rng);
                 match randomized_camp_skills {
                     Ok(skill_data) => {
                         let camp_skills_dir = &gpaths.mod_dir.join("raid").join("camping");
@@ -387,7 +387,7 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
             &gpaths.base_heroes,
             &gpaths.mod_heroes,
             heroes,
-            seed_rng.clone(),
+            &mut seed_rng,
         );
 
         info!("Extracting localization data");
@@ -462,7 +462,7 @@ fn enable_mod(handle: &AppWindow, gpaths: &GamePath) {
             rand_enemy::mash::randomize(
                 &gpaths.mod_dungeon,
                 mashes,
-                seed_rng,
+                &mut seed_rng,
                 handle.get_rand_boss(),
                 handle.get_rand_monster(),
             );

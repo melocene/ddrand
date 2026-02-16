@@ -1,6 +1,6 @@
 use indexmap::IndexMap;
 use log::*;
-use rand::{Rng, rngs::StdRng};
+use rand::{RngExt, rngs::StdRng};
 use regex::{Captures, Regex};
 use serde::Serialize;
 use std::collections::HashMap;
@@ -229,10 +229,9 @@ pub fn randomize(
     base_hpaths: &HashMap<String, PathBuf>,
     mod_hpath: &Path,
     heroes: Vec<Hero>,
-    rng: StdRng,
+    seed_rng: &mut StdRng,
 ) -> Vec<SkillLocalization> {
     info!("Randomizing skills");
-    let mut seed_rng: StdRng = rng;
 
     // master collection holding all of the skills for all hero classes
     let mut skill_collection: Vec<Skill> = Vec::new();
@@ -243,7 +242,7 @@ pub fn randomize(
     }
 
     // shuffle the skills into smaller groups to ease the randomization process
-    let mut skill_groups = shuffle_skills(skill_collection, heroes.len(), &mut seed_rng);
+    let mut skill_groups = shuffle_skills(skill_collection, heroes.len(), seed_rng);
     let mut skloc: Vec<SkillLocalization> = Vec::new();
 
     for hero in heroes {

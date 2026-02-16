@@ -15,8 +15,7 @@ pub fn parse_from_file(file_path: &PathBuf) -> Result<Value, Box<dyn Error>> {
     serde_json::from_reader(reader).map_err(|e| e.into())
 }
 
-pub fn randomize(mut skills_data: Value, rng: StdRng) -> Result<Value, Box<dyn Error>> {
-    let mut seed_rng: StdRng = rng;
+pub fn randomize(mut skills_data: Value, seed_rng: &mut StdRng) -> Result<Value, Box<dyn Error>> {
     let mut class_assigned_count: HashMap<String, u8> = HashMap::new();
 
     // The first camping skill should be `Encourage` which is available to all heroes.
@@ -65,9 +64,7 @@ pub fn randomize(mut skills_data: Value, rng: StdRng) -> Result<Value, Box<dyn E
                         .collect();
                     // Make sure to sort the results to always ensure consistent output for the same seed.
                     available_classes.sort();
-                    if let Some(selected_class) =
-                        available_classes.into_iter().choose(&mut seed_rng)
-                    {
+                    if let Some(selected_class) = available_classes.into_iter().choose(seed_rng) {
                         hero_classes.push(Value::String(selected_class.clone()));
                         if let Some(entry) = class_assigned_count.get_mut(&selected_class) {
                             *entry += 1;
@@ -132,9 +129,9 @@ mod tests {
             ]
         });
 
-        let test_seed_rng = seed::create_rng("testseed00");
+        let mut test_seed_rng = seed::create_rng("testseed00");
         let skills_data: Value = serde_json::from_str(test_input_json).unwrap();
-        let randomized_data = randomize(skills_data, test_seed_rng).unwrap();
+        let randomized_data = randomize(skills_data, &mut test_seed_rng).unwrap();
 
         assert_eq!(randomized_data, expected_output_json);
     }
@@ -177,9 +174,9 @@ mod tests {
             ]
         });
 
-        let test_seed_rng = seed::create_rng("testseed00");
+        let mut test_seed_rng = seed::create_rng("testseed00");
         let skills_data: Value = serde_json::from_str(test_input_json).unwrap();
-        let randomized_data = randomize(skills_data, test_seed_rng).unwrap();
+        let randomized_data = randomize(skills_data, &mut test_seed_rng).unwrap();
 
         assert_ne!(randomized_data, expected_output_json);
     }
@@ -222,9 +219,9 @@ mod tests {
             ]
         });
 
-        let test_seed_rng = seed::create_rng("testseed00");
+        let mut test_seed_rng = seed::create_rng("testseed00");
         let skills_data: Value = serde_json::from_str(test_input_json).unwrap();
-        let randomized_data = randomize(skills_data, test_seed_rng).unwrap();
+        let randomized_data = randomize(skills_data, &mut test_seed_rng).unwrap();
 
         assert_eq!(randomized_data, expected_output_json);
     }

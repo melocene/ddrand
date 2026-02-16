@@ -1,5 +1,5 @@
 use log::*;
-use rand::{Rng, rngs::StdRng};
+use rand::{RngExt, rngs::StdRng};
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
@@ -97,11 +97,10 @@ pub fn extract_data(datafiles: &[PathBuf]) -> Result<Vec<Mash>, Box<dyn Error>> 
 pub fn randomize(
     mod_dpath: &Path,
     mashes: Vec<Mash>,
-    rng: StdRng,
+    seed_rng: &mut StdRng,
     rand_boss: bool,
     rand_mash: bool,
 ) {
-    let mut seed_rng: StdRng = rng;
     let mut boss_groups: HashMap<String, Vec<Vec<String>>> = HashMap::new();
     let mut hall_groups: HashMap<String, Vec<Vec<String>>> = HashMap::new();
     let mut room_groups: HashMap<String, Vec<Vec<String>>> = HashMap::new();
@@ -124,11 +123,7 @@ pub fn randomize(
             }
         }
         for level in boss_collection.keys() {
-            let group = shuffle_mash_loc(
-                boss_collection.get(level).unwrap().clone(),
-                4,
-                &mut seed_rng,
-            );
+            let group = shuffle_mash_loc(boss_collection.get(level).unwrap().clone(), 4, seed_rng);
             boss_groups.insert(level.to_string(), group);
         }
     }
@@ -168,20 +163,12 @@ pub fn randomize(
         }
 
         for level in hall_collection.keys() {
-            let group = shuffle_mash_loc(
-                hall_collection.get(level).unwrap().clone(),
-                4,
-                &mut seed_rng,
-            );
+            let group = shuffle_mash_loc(hall_collection.get(level).unwrap().clone(), 4, seed_rng);
             hall_groups.insert(level.to_string(), group);
         }
 
         for level in room_collection.keys() {
-            let group = shuffle_mash_loc(
-                room_collection.get(level).unwrap().clone(),
-                4,
-                &mut seed_rng,
-            );
+            let group = shuffle_mash_loc(room_collection.get(level).unwrap().clone(), 4, seed_rng);
             room_groups.insert(level.to_string(), group);
         }
     }
