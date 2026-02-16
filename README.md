@@ -6,6 +6,7 @@ This application generates a randomizer mod for [Darkest Dungeon](https://www.da
 
 The following are included as options for randomization:
 
+- Hero camping skills, including official DLC heroes if present
 - Hero combat skills, including official DLC heroes if present
 - Hallway and room spawns in Cove, Ruins, Warrens, and Weald
 
