@@ -27,7 +27,7 @@ chrono = { version = "0.4.44", default-features = false, features = [
   "clock",
   "alloc",
 ] }
-clap = { version = "4.6.0", default-features = false, features = [
+clap = { version = "4.6.1", default-features = false, features = [
   "derive",
   "error-context",
   "help",
@@ -39,11 +39,11 @@ flexi_logger = { version = "0.31.8", features = [
   "async",
   "buffer_writer",
 ], default-features = false }
-indexmap = "2.13.0"
+indexmap = "2.14.0"
 log = "0.4.29"
-open = { version = "5.3.3", features = ["shellexecute-on-windows"] }
-rand = "0.10.0"
-rand_pcg = "0.10.1"
+open = { version = "5.3.4", features = ["shellexecute-on-windows"] }
+rand = "0.10.1"
+rand_pcg = "0.10.2"
 rand_seeder = "0.5.0"
 regex = { version = "1.12.3", default-features = false, features = [
   "std",
@@ -63,7 +63,7 @@ slint = { version = "1.15.1", default-features = false, features = [
   "renderer-winit-software",
   "std",
 ] }
-steamlocate = "2.0.1"
+steamlocate = "2.1.0"
 
 [build-dependencies]
 slint-build = "1.15.1"
