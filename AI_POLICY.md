@@ -1,58 +1,69 @@
 # AI Usage Policy
 
-## There are Humans Here
+## There Are Humans Here
 
-Please remember that `ddrand` is maintained primarily by humans.
+Please remember that `ddrand` is maintained by humans.
 
-Every discussion, issue, and pull request is read and reviewed by humans (and sometimes machines, too). It is a boundary point at which people interact with each other and the work done. It is rude and disrespectful to approach this boundary with low-effort work since it puts the burden of validation on the maintainer and other contributors.
+Every discussion, issue, and pull request is read and reviewed by people. These spaces are boundary points where contributors, maintainers, and users interact with each other and with the work. It is rude and disrespectful to approach that boundary with low-effort or unverified work, because it shifts the burden of understanding and validation onto others.
 
-In a perfect world, AI would produce high-quality, accurate work every time. But today, that reality depends on the driver and usage of the AI.
+In a perfect world, AI would produce high-quality, accurate work every time. Today, that depends heavily on the person driving the tool and reviewing its output.
 
-The following policy is adapted from, and inspired by the AI policies of other open source projects such as [Ghostty](https://github.com/ghostty-org/ghostty/blob/main/AI_POLICY.md) 
-and [KeePassXC](https://github.com/keepassxreboot/keepassxc?tab=readme-ov-file#generative-ai).
+This policy is adapted from, and inspired by, the AI policies of other open source projects such as [Ghostty](https://github.com/ghostty-org/ghostty/blob/main/AI_POLICY.md), [KeePassXC](https://github.com/keepassxreboot/keepassxc?tab=readme-ov-file#generative-ai), [uv](https://github.com/astral-sh/.github/blob/main/AI_POLICY.md), and [ripgrep](https://github.com/BurntSushi/ripgrep/blob/master/AI_POLICY.md).
 
-## AI is Welcome Here
+## AI Is Welcome Here
 
-Generative AI is fast becoming a first-party feature in most development environments, including GitHub itself. As such, it is impossible to completely ban AI usage in a project.
+Generative AI is becoming a first-party feature in many development environments, including GitHub itself. We are not trying to ban AI usage.
 
-`ddrand` is written with AI assistance (NOT vibe coded or otherwise primarily writted by AI), as AI tools can be a productive tool. As a project, we welcome AI as a tool! 
-For example find and replace operations, explaining code snippits or issues from GitHub, and recommending code segments for possible improvement or refactoring are all acceptable uses of AI tools.
+`ddrand` is written with AI assistance, but it is not vibe coded or primarily written by AI. AI tools can be productive for tasks such as explaining unfamiliar code, finding related code paths, drafting refactors for human review, summarizing issues, and automating tedious edits.
 
-This section is included to be transparent about the project's usage about AI for people who may disagree with it, and to address the misconception that this policy is anti-AI in nature.
+This section is included to be transparent about the project's use of AI, and to address the misconception that this policy is anti-AI.
 
-**The reason for the strict AI policy is not due to an anti-AI stance**, but instead to help foster a learning environment for new developers, and avoid low quality, drive-by contributions.
+**The reason for this policy is not an anti-AI stance.** The goal is to foster a good learning and collaboration environment, and to avoid low-quality drive-by contributions that waste reviewer time.
 
 ## Rules
 
 **Note:** These rules apply to all contributors, including maintainers.
 
-#### **No primarily AI generated (vibe coded) contributions are allowed.**
+#### **No primarily AI-generated (vibe coded) contributions are allowed.**
 
-  If you cannot explain the code or make requested changes, then AI should not have been used.
+If you cannot explain the code, justify the design, or make requested changes, then AI should not have been used for that contribution.
 
-#### **All AI usage in any form must be disclosed.**
+#### **Keep a human in the loop.**
 
-  You must state the tool you used (e.g. Claude Code, Cursor, Amp) along with the extent that the work was AI-assisted. 
-  Please do not simply state "I used AI" without further context. If you used multiple tools, please list them all.
+AI may assist you, but a human contributor must direct the work, review the output, understand the result, and take responsibility for the submission. Autonomous agents may not contribute on your behalf. Pull requests that appear to have been created autonomously may be closed.
 
-#### **Pull requests created in any way by AI can only be for open issues.**
+#### **All AI usage must be disclosed.**
 
-  Drive-by pull requests that do not reference an open issue will be closed. If AI isn't disclosed but a maintainer suspects its use, the PR will be closed. 
-  If you want to share code for a new issue, open the issue first and wait for feedback before submitting a pull request.
+State the tool or tools you used, such as Claude Code, Cursor, Copilot, ChatGPT, Amp, or another assistant. Also describe the extent of the assistance. Please do not simply say "I used AI" without context.
 
-#### **Pull requests created by AI must have been fully verified with human use.**
+#### **AI-assisted pull requests should be tied to open issues or prior discussion.**
 
-  AI must not create hypothetically correct code that hasn't been tested. Importantly, you must not allow AI to write code for platforms or environments you don't have access to manually test on. 
-  In the context of `ddrand`, as an example, writing code for the Linux or MacOS versions of the game without being able to test on those platforms.
+Drive-by pull requests that do not reference an open issue or maintainer discussion may be closed. If you want to propose a new feature or larger change, open an issue first and wait for feedback before submitting a pull request. If AI usage is not disclosed but a maintainer suspects it, the pull request may be closed.
 
-#### **Issues and pull requests can use AI assistance but must have a human-in-the-loop.**
+#### **Issues, pull requests, and review replies must be in your own words.**
 
-  This means that any content generated with AI must have been reviewed _and edited_ by a human before submission. AI is very good at being overly verbose and including noise that distracts from the main point. Humans must do their research and trim this down.
+AI should not be used to generate comments when communicating with maintainers. Do not copy AI-generated responses into issue threads, pull request descriptions, or review replies. If you use AI to help organize, edit, or translate your thoughts, review and edit the result so it reflects your own understanding, voice, and intent.
 
-#### **No AI-generated media is allowed (art, images, videos, audio, etc.).**
+#### **AI-assisted work must be verified by a human.**
 
-  Text and code are the only acceptable AI-generated content, per the other rules in this policy.
+Never submit hypothetically correct code that you have not tested. Run the project's documented checks and manually verify behavior when appropriate. Do not use AI to generate code for platforms, environments, or workflows you cannot reasonably test. If you cannot run a relevant check, say so and explain why.
 
-#### **Bad AI submitters will be banned.**
+#### **Quote AI context sparingly.**
 
-  You've been warned. We love to help junior developers learn and grow, but if you're interested in that then don't use AI, and we'll help you. I'm sorry that bad AI submitters have ruined this for others.
+If context from an AI interaction is relevant to a discussion, include it only as a clearly disclosed quote block and add your own explanation of why it matters. Do not paste long AI transcripts or make maintainers infer the relevance.
+
+#### **Keep generated text concise.**
+
+AI is often verbose and noisy. Any AI-assisted issue, pull request, documentation, or review text must be reviewed and edited down to the relevant facts, decisions, tradeoffs, and validation.
+
+#### **Keep generated changes reviewable.**
+
+Avoid large, opaque rewrites. Prefer small, focused changes that reviewers can understand. If a change is mechanical or generated, explain the scope and how you verified it.
+
+#### **No AI-generated media is allowed.**
+
+AI assistance is permitted only for code and text, subject to the rules above. Do not submit AI-generated images, art, video, audio, or other media. AI tools can also inadvertently reproduce copyrighted material in generated text or code, so audit your contribution before submitting.
+
+#### **Bad AI submitters may lose contribution privileges.**
+
+We enjoy helping developers learn and grow. Repeatedly submitting unverified, low-effort, or AI-generated work that you cannot explain takes time away from everyone and may result in losing contribution privileges.
