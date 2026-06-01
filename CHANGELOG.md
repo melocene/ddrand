@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org).
 
 ## [] - Unreleased
 
+## [0.4.1] - 2026-05-11
+
+### Changed
+
+- [dev] Updated dependencies
+- [dev] MSRV raised to 1.95 to match current stable
+
+### Fixed
+
+- [dev] Resolved new clippy lints surfaced by the updated toolchain
+
 ## [0.4.0] - 2026-02-05
 
 ### Added
